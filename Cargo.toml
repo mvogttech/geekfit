@@ -10,6 +10,10 @@ keywords = ["fitness", "gamification", "tray", "health", "productivity"]
 categories = ["games", "gui"]
 
 [dependencies]
+# GUI framework (lightweight, cross-platform)
+eframe = "0.29"
+egui = "0.29"
+
 # System tray functionality (cross-platform)
 tray-icon = "0.19"
 
@@ -41,17 +45,8 @@ env_logger = "0.11"
 thiserror = "2"
 anyhow = "1"
 
-# For Windows event loop
-[target.'cfg(windows)'.dependencies]
-winit = "0.30"
-
-# For macOS event loop
-[target.'cfg(target_os = "macos")'.dependencies]
-winit = "0.30"
-
-# For Linux event loop
-[target.'cfg(target_os = "linux")'.dependencies]
-winit = "0.30"
+# Image handling for icons
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [profile.release]
 # Optimize for size while maintaining performance

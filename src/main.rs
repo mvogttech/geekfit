@@ -19,6 +19,7 @@
 //! - Linux: Uses D-Bus notifications and system tray (requires libappindicator)
 
 mod config;
+mod gui;
 mod models;
 mod notifications;
 mod scheduler;
@@ -27,185 +28,62 @@ mod tray;
 
 use anyhow::{Context, Result};
 use std::sync::mpsc;
+use std::sync::{Arc, RwLock};
+use std::thread;
 use std::time::Duration;
-use winit::application::ApplicationHandler;
-use winit::event::WindowEvent;
-use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
-use winit::window::WindowId;
 
 use config::Config;
+use gui::GuiAction;
 use models::{ExerciseType, Level};
 use notifications::Notifier;
 use scheduler::{Scheduler, SchedulerMessage};
 use storage::Storage;
 use tray::{TrayAction, TrayManager};
 
-/// Main application state
-struct GeekfitApp {
-    /// Configuration
-    config: Config,
-
-    /// Data storage
-    storage: Storage,
-
-    /// Notification manager
-    notifier: Notifier,
-
-    /// System tray manager
-    tray: Option<TrayManager>,
-
-    /// Background scheduler
-    scheduler: Option<Scheduler>,
-
-    /// Channel receiver for scheduler messages
-    scheduler_receiver: mpsc::Receiver<SchedulerMessage>,
-
-    /// Previous level (for detecting level-ups)
-    previous_level: Level,
-
-    /// Whether this is the first run
-    first_run: bool,
+/// Shared application state
+struct AppState {
+    config: Arc<RwLock<Config>>,
+    storage: Arc<Storage>,
+    notifier: Arc<RwLock<Notifier>>,
+    previous_level: Arc<RwLock<Level>>,
 }
 
-impl GeekfitApp {
-    /// Create a new application instance
+impl AppState {
     fn new() -> Result<Self> {
-        // Initialize logging
-        env_logger::Builder::from_env(
-            env_logger::Env::default().default_filter_or("info")
-        ).init();
-
-        log::info!("=== Geekfit v{} starting ===", env!("CARGO_PKG_VERSION"));
-
-        // Load configuration
         let config = Config::load().context("Failed to load configuration")?;
         log::info!("Configuration loaded");
 
-        // Initialize storage
         let storage = Storage::new().context("Failed to initialize storage")?;
         log::info!("Storage initialized");
 
-        // Get initial level
         let progress = storage.get_progress()?;
         let previous_level = progress.current_level.clone();
-        let first_run = progress.total_exercises == 0;
 
-        // Create notifier
         let notifier = Notifier::new(&config);
 
-        // Create scheduler channel (placeholder until UI init)
-        let (_scheduler_sender, scheduler_receiver) = mpsc::channel();
-
         Ok(Self {
-            config,
-            storage,
-            notifier,
-            tray: None,
-            scheduler: None,
-            scheduler_receiver,
-            previous_level,
-            first_run,
+            config: Arc::new(RwLock::new(config)),
+            storage: Arc::new(storage),
+            notifier: Arc::new(RwLock::new(notifier)),
+            previous_level: Arc::new(RwLock::new(previous_level)),
         })
     }
 
-    /// Initialize the tray icon and scheduler (must be called from event loop)
-    fn initialize_ui(&mut self) -> Result<()> {
-        // Get initial tooltip
-        let tooltip = self.storage.tooltip_summary()?;
-
-        // Create tray manager
-        let tray = TrayManager::new(&self.config, &tooltip)
-            .context("Failed to create tray manager")?;
-        self.tray = Some(tray);
-
-        // Create and start scheduler with a new channel
-        let (scheduler_sender, scheduler_receiver) = mpsc::channel();
-        self.scheduler_receiver = scheduler_receiver;
-
-        let mut scheduler = Scheduler::new(self.config.clone(), scheduler_sender);
-        scheduler.start();
-        self.scheduler = Some(scheduler);
-
-        // Send welcome notification on first run
-        if self.first_run {
-            if let Err(e) = self.notifier.welcome() {
-                log::warn!("Failed to send welcome notification: {}", e);
-            }
-        }
-
-        log::info!("UI initialized successfully");
-        Ok(())
-    }
-
-    /// Handle a tray menu action
-    fn handle_tray_action(&mut self, action: TrayAction) {
-        log::debug!("Handling tray action: {:?}", action);
-
-        match action {
-            TrayAction::ViewProgress => {
-                if let Ok(report) = self.storage.detailed_report() {
-                    tray::show_message("Geekfit Progress", &report);
-                }
-            }
-
-            TrayAction::LogExercise(exercise) => {
-                self.log_exercise(exercise);
-            }
-
-            TrayAction::ToggleReminders => {
-                if let Some(ref scheduler) = self.scheduler {
-                    let enabled = scheduler.toggle_enabled();
-                    self.config.reminders.enabled = enabled;
-
-                    if let Some(ref tray) = self.tray {
-                        tray.set_reminders_checked(enabled);
-                    }
-
-                    // Save config
-                    if let Err(e) = self.config.save() {
-                        log::error!("Failed to save config: {}", e);
-                    }
-
-                    let status = if enabled { "enabled" } else { "disabled" };
-                    let _ = self.notifier.custom(
-                        "Reminders Updated",
-                        &format!("Exercise reminders are now {}", status),
-                    );
-                }
-            }
-
-            TrayAction::OpenSettings => {
-                tray::show_settings_info(&self.config);
-            }
-
-            TrayAction::ShowAbout => {
-                let about = TrayManager::about_text();
-                tray::show_message("About Geekfit", &about);
-            }
-
-            TrayAction::Quit => {
-                log::info!("Quit requested");
-                std::process::exit(0);
-            }
-
-            TrayAction::Unknown(id) => {
-                log::warn!("Unknown menu action: {}", id);
-            }
-        }
-    }
-
-    /// Log an exercise completion
-    fn log_exercise(&mut self, exercise: ExerciseType) {
-        let reps = self.config.get_reps(&exercise);
+    /// Log an exercise and handle notifications
+    fn log_exercise(&self, exercise: ExerciseType) {
+        let config = self.config.read().unwrap();
+        let reps = config.get_reps(&exercise);
+        drop(config);
 
         log::info!("Logging exercise: {} x {}", exercise.display_name(), reps);
 
         match self.storage.record_exercise(exercise.clone(), reps) {
             Ok(new_badges) => {
-                // Get updated progress
                 if let Ok(progress) = self.storage.get_progress() {
+                    let notifier = self.notifier.read().unwrap();
+
                     // Notify about completion
-                    let _ = self.notifier.exercise_completed(
+                    let _ = notifier.exercise_completed(
                         &exercise,
                         reps,
                         exercise.points_per_set(),
@@ -213,126 +91,281 @@ impl GeekfitApp {
                     );
 
                     // Check for level up
-                    if progress.current_level != self.previous_level {
-                        let _ = self.notifier.level_up(
+                    let mut prev_level = self.previous_level.write().unwrap();
+                    if progress.current_level != *prev_level {
+                        let _ = notifier.level_up(
                             &progress.current_level,
                             progress.total_points,
                         );
-                        self.previous_level = progress.current_level.clone();
+                        *prev_level = progress.current_level.clone();
                     }
 
                     // Notify about new badges
                     for badge in new_badges {
-                        let _ = self.notifier.badge_earned(&badge);
+                        let _ = notifier.badge_earned(&badge);
                     }
 
                     // Check for streak milestones
                     let streak = progress.current_streak;
                     if [7, 14, 30, 60, 90, 100].contains(&streak) {
-                        let _ = self.notifier.streak_milestone(streak);
+                        let _ = notifier.streak_milestone(streak);
                     }
                 }
             }
             Err(e) => {
                 log::error!("Failed to record exercise: {}", e);
-                let _ = self.notifier.custom(
-                    "Error",
-                    &format!("Failed to log exercise: {}", e),
-                );
             }
-        }
-    }
-
-    /// Handle a scheduler message
-    fn handle_scheduler_message(&mut self, message: SchedulerMessage) {
-        match message {
-            SchedulerMessage::ExerciseReminder { exercise, reps } => {
-                log::info!("Reminder: {} x {}", exercise.display_name(), reps);
-                if let Err(e) = self.notifier.exercise_reminder(&exercise, reps) {
-                    log::error!("Failed to send reminder notification: {}", e);
-                }
-            }
-            SchedulerMessage::Started => {
-                log::info!("Scheduler started");
-            }
-            SchedulerMessage::Stopped => {
-                log::info!("Scheduler stopped");
-            }
-            SchedulerMessage::Error(err) => {
-                log::error!("Scheduler error: {}", err);
-            }
-        }
-    }
-
-    /// Collect tray events into a vector to avoid borrow issues
-    fn collect_tray_events(&self) -> Vec<TrayAction> {
-        let mut actions = Vec::new();
-        if let Some(ref tray) = self.tray {
-            while let Some(action) = tray.poll_event() {
-                actions.push(action);
-            }
-        }
-        actions
-    }
-
-    /// Process pending events (called from event loop)
-    fn process_events(&mut self) {
-        // Collect tray menu events first to avoid borrow issues
-        let actions = self.collect_tray_events();
-        for action in actions {
-            self.handle_tray_action(action);
-        }
-
-        // Process scheduler messages
-        while let Ok(message) = self.scheduler_receiver.try_recv() {
-            self.handle_scheduler_message(message);
         }
     }
 }
 
-impl ApplicationHandler for GeekfitApp {
-    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {
-        // Initialize UI components when the event loop is ready
-        if self.tray.is_none() {
-            if let Err(e) = self.initialize_ui() {
-                log::error!("Failed to initialize UI: {}", e);
-                std::process::exit(1);
-            }
+/// Run the GUI window
+fn run_gui_window(state: Arc<AppState>) {
+    let progress_handle = state.storage.get_progress_handle();
+    let config = state.config.read().unwrap().clone();
+
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([650.0, 500.0])
+            .with_min_inner_size([500.0, 400.0])
+            .with_title("Geekfit - Fitness Tracker"),
+        ..Default::default()
+    };
+
+    let state_clone = Arc::clone(&state);
+
+    let _ = eframe::run_native(
+        "Geekfit",
+        options,
+        Box::new(move |cc| {
+            // Set up custom styling
+            cc.egui_ctx.set_visuals(egui::Visuals::dark());
+
+            let mut style = (*cc.egui_ctx.style()).clone();
+            style.spacing.item_spacing = egui::vec2(10.0, 8.0);
+            cc.egui_ctx.set_style(style);
+
+            Ok(Box::new(GeekfitGuiApp::new(
+                cc,
+                progress_handle.clone(),
+                config.clone(),
+                Arc::clone(&state_clone),
+            )))
+        }),
+    );
+}
+
+use eframe::egui;
+
+/// GUI Application wrapper that handles actions
+struct GeekfitGuiApp {
+    gui: gui::GeekfitGui,
+    state: Arc<AppState>,
+}
+
+impl GeekfitGuiApp {
+    fn new(
+        cc: &eframe::CreationContext<'_>,
+        progress: Arc<RwLock<models::UserProgress>>,
+        config: Config,
+        state: Arc<AppState>,
+    ) -> Self {
+        Self {
+            gui: gui::GeekfitGui::new(cc, progress, config),
+            state,
         }
     }
+}
 
-    fn window_event(
-        &mut self,
-        _event_loop: &ActiveEventLoop,
-        _window_id: WindowId,
-        _event: WindowEvent,
-    ) {
-        // We don't have any windows, but this is required by the trait
-    }
+impl eframe::App for GeekfitGuiApp {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        // Let the GUI render
+        self.gui.update(ctx, frame);
 
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        // Process all pending events
-        self.process_events();
-
-        // Set control flow to wait with timeout for responsive event handling
-        event_loop.set_control_flow(ControlFlow::wait_duration(Duration::from_millis(100)));
+        // Process any actions from the GUI
+        for action in self.gui.take_actions() {
+            match action {
+                GuiAction::LogExercise(exercise) => {
+                    self.state.log_exercise(exercise);
+                }
+                GuiAction::ToggleReminders => {
+                    let mut config = self.state.config.write().unwrap();
+                    config.reminders.enabled = !config.reminders.enabled;
+                    let _ = config.save();
+                }
+                GuiAction::SaveSettings => {
+                    let new_config = self.gui.config().clone();
+                    {
+                        let mut config = self.state.config.write().unwrap();
+                        *config = new_config.clone();
+                    }
+                    if let Err(e) = new_config.save() {
+                        log::error!("Failed to save settings: {}", e);
+                    } else {
+                        log::info!("Settings saved");
+                    }
+                }
+                GuiAction::CloseWindow => {
+                    // Window will close naturally
+                }
+            }
+        }
     }
 }
 
 fn main() -> Result<()> {
-    // Create application
-    let mut app = GeekfitApp::new()?;
+    // Initialize logging
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info")
+    ).init();
 
-    // Create event loop
-    let event_loop = EventLoop::new()
-        .context("Failed to create event loop")?;
+    log::info!("=== Geekfit v{} starting ===", env!("CARGO_PKG_VERSION"));
 
-    // Run the application
-    log::info!("Starting event loop");
-    event_loop.run_app(&mut app)
-        .context("Event loop error")?;
+    // Create shared application state
+    let state = Arc::new(AppState::new()?);
+
+    // Check if this is first run
+    let first_run = state.storage.get_progress()?.total_exercises == 0;
+
+    // Create scheduler channel
+    let (scheduler_sender, scheduler_receiver) = mpsc::channel();
+
+    // Start the scheduler in a background thread
+    let scheduler_config = state.config.read().unwrap().clone();
+    let mut scheduler = Scheduler::new(scheduler_config, scheduler_sender);
+    scheduler.start();
+
+    // Create a channel for GUI requests
+    let (gui_sender, gui_receiver) = mpsc::channel::<()>();
+
+    // Spawn the tray icon thread
+    let state_for_tray = Arc::clone(&state);
+    let gui_sender_clone = gui_sender.clone();
+
+    let tray_handle = thread::spawn(move || {
+        // We need to run the tray on the main thread for some platforms
+        // For now, use a simple polling loop
+        run_tray_loop(state_for_tray, scheduler_receiver, gui_sender_clone, first_run)
+    });
+
+    // Wait for GUI requests and spawn GUI windows
+    let state_for_gui = Arc::clone(&state);
+    loop {
+        match gui_receiver.recv() {
+            Ok(()) => {
+                log::info!("Opening GUI window");
+                run_gui_window(Arc::clone(&state_for_gui));
+            }
+            Err(_) => {
+                log::info!("GUI channel closed, shutting down");
+                break;
+            }
+        }
+    }
+
+    // Clean up
+    drop(scheduler);
+    let _ = tray_handle.join();
 
     Ok(())
+}
+
+/// Run the tray icon event loop
+fn run_tray_loop(
+    state: Arc<AppState>,
+    scheduler_receiver: mpsc::Receiver<SchedulerMessage>,
+    gui_sender: mpsc::Sender<()>,
+    first_run: bool,
+) -> Result<()> {
+    // Get initial tooltip
+    let tooltip = state.storage.tooltip_summary()?;
+    let config = state.config.read().unwrap().clone();
+
+    // Create tray manager
+    let tray = TrayManager::new(&config, &tooltip)
+        .context("Failed to create tray manager")?;
+
+    // Send welcome notification on first run
+    if first_run {
+        let notifier = state.notifier.read().unwrap();
+        if let Err(e) = notifier.welcome() {
+            log::warn!("Failed to send welcome notification: {}", e);
+        }
+    }
+
+    log::info!("Tray icon created, entering event loop");
+
+    loop {
+        // Poll for tray events
+        if let Some(action) = tray.poll_event() {
+            match action {
+                TrayAction::ViewProgress | TrayAction::OpenSettings => {
+                    // Request GUI window
+                    let _ = gui_sender.send(());
+                }
+
+                TrayAction::LogExercise(exercise) => {
+                    state.log_exercise(exercise);
+                }
+
+                TrayAction::ToggleReminders => {
+                    let mut config = state.config.write().unwrap();
+                    config.reminders.enabled = !config.reminders.enabled;
+                    tray.set_reminders_checked(config.reminders.enabled);
+
+                    if let Err(e) = config.save() {
+                        log::error!("Failed to save config: {}", e);
+                    }
+
+                    let status = if config.reminders.enabled { "enabled" } else { "disabled" };
+                    let notifier = state.notifier.read().unwrap();
+                    let _ = notifier.custom(
+                        "Reminders Updated",
+                        &format!("Exercise reminders are now {}", status),
+                    );
+                }
+
+                TrayAction::ShowAbout => {
+                    // Open GUI to show about (or show notification)
+                    let _ = gui_sender.send(());
+                }
+
+                TrayAction::Quit => {
+                    log::info!("Quit requested");
+                    std::process::exit(0);
+                }
+
+                TrayAction::Unknown(id) => {
+                    log::warn!("Unknown menu action: {}", id);
+                }
+            }
+        }
+
+        // Process scheduler messages
+        while let Ok(message) = scheduler_receiver.try_recv() {
+            match message {
+                SchedulerMessage::ExerciseReminder { exercise, reps } => {
+                    log::info!("Reminder: {} x {}", exercise.display_name(), reps);
+                    let notifier = state.notifier.read().unwrap();
+                    if let Err(e) = notifier.exercise_reminder(&exercise, reps) {
+                        log::error!("Failed to send reminder notification: {}", e);
+                    }
+                }
+                SchedulerMessage::Started => {
+                    log::info!("Scheduler started");
+                }
+                SchedulerMessage::Stopped => {
+                    log::info!("Scheduler stopped");
+                }
+                SchedulerMessage::Error(err) => {
+                    log::error!("Scheduler error: {}", err);
+                }
+            }
+        }
+
+        // Small sleep to avoid busy-waiting
+        thread::sleep(Duration::from_millis(50));
+    }
 }
 
 #[cfg(test)]

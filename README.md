@@ -14,8 +14,9 @@ A lightweight, cross-platform gamified fitness tracker for programmers. Stay fit
 
 ## Features
 
-- **System Tray Integration**: Runs silently in your system tray (or menu bar on macOS)
-- **Smart Reminders**: Configurable exercise reminders during work hours
+- **Modern GUI**: Clean, dark-themed interface with dashboard, exercises, badges, history, and settings tabs
+- **System Tray Integration**: Runs silently in your system tray (or menu bar on macOS) with quick access menu
+- **Smart Reminders**: Configurable exercise reminders during work hours with random or fixed intervals
 - **Gamification**:
   - Points for each completed exercise
   - 6 levels from "Newbie Coder" to "CTO"
@@ -23,14 +24,25 @@ A lightweight, cross-platform gamified fitness tracker for programmers. Stay fit
   - Streak tracking for consistency
 - **5 Exercise Types**: Push-ups, Squats, Planks, Jumping Jacks, Stretches
 - **Cross-Platform**: Windows, macOS, and Linux support
-- **Lightweight**: < 10MB binary, minimal dependencies
+- **Desktop Notifications**: Native notifications for reminders and achievements
+- **Persistent Progress**: All data saved locally in JSON format
+
+## Screenshots
+
+The app features a modern dark-themed GUI:
+
+- **Dashboard**: View your level, points, streak, and today's progress
+- **Exercises**: Log exercises with one click, view lifetime stats
+- **Badges**: Track your achievement progress
+- **History**: Browse your exercise history by day
+- **Settings**: Configure reminders, work hours, active days, and enabled exercises
 
 ## Quick Start
 
 ### Prerequisites
 
 - Rust 1.70 or later
-- On Linux: `libappindicator3-dev` and `libnotify-dev`
+- On Linux: `libappindicator3-dev`, `libnotify-dev`, and OpenGL libraries
 
 ### Build & Run
 
@@ -61,6 +73,23 @@ RUST_LOG=debug cargo run
 # Run tests
 cargo test
 ```
+
+## Usage
+
+1. **Launch**: Run the application - it starts with a system tray icon
+2. **Tray Icon**: Right-click the tray icon to access the menu:
+   - **View Progress**: Opens the main GUI window
+   - **Log Exercise**: Quick-log an exercise from the submenu
+   - **Reminders Enabled**: Toggle exercise reminders on/off
+   - **Settings**: Opens the GUI with settings tab
+   - **About**: Shows app information
+   - **Quit**: Exit the application
+3. **GUI Window**: Click "View Progress" or "Settings" to open the main window with:
+   - Dashboard with level progress and stats
+   - Exercise logging with confirmation
+   - Badge collection view
+   - Exercise history
+   - Full settings configuration
 
 ## Configuration
 
@@ -94,6 +123,8 @@ enabled = true
 play_sound = true
 timeout_seconds = 10
 ```
+
+You can also configure all settings through the GUI Settings tab.
 
 ## Data Storage
 
@@ -138,35 +169,26 @@ Progress data is stored as JSON at:
 | 1K Push-ups Club | 1000 total push-ups |
 | Iron Will | 100 plank sessions |
 
-## Usage
-
-1. **Launch**: Run the application - it minimizes to system tray
-2. **Hover**: See your current status in the tooltip
-3. **Right-click**: Access the context menu:
-   - View Progress - See detailed stats
-   - Log Exercise - Manually log completed exercises
-   - Toggle Reminders - Enable/disable reminders
-   - Settings - View configuration info
-   - About - App information
-   - Quit - Exit the application
-
 ## Platform Notes
 
 ### Windows
 - Notifications use Windows Toast notifications
 - System tray icon appears in the notification area
+- GUI uses native Windows rendering
 
 ### macOS
 - Notifications use Notification Center
 - Icon appears in the menu bar
+- GUI uses native macOS rendering
 
 ### Linux
 - Requires `libappindicator3` for system tray
 - Requires a notification daemon (e.g., `dunst`, GNOME, KDE)
+- GUI requires OpenGL support
 - Install dependencies:
   ```bash
   # Debian/Ubuntu
-  sudo apt install libappindicator3-dev libnotify-dev
+  sudo apt install libappindicator3-dev libnotify-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
   # Fedora
   sudo dnf install libappindicator-gtk3-devel libnotify-devel
@@ -183,7 +205,8 @@ geekfit/
 ├── README.md           # This file
 └── src/
     ├── main.rs         # Entry point and event loop
-    ├── config.rs       # Configuration management
+    ├── config.rs       # TOML configuration management
+    ├── gui.rs          # egui-based graphical interface
     ├── models.rs       # Data models (exercises, levels, badges)
     ├── notifications.rs # Cross-platform notifications
     ├── scheduler.rs    # Background reminder timer
@@ -195,10 +218,10 @@ geekfit/
 
 | Crate | Purpose |
 |-------|---------|
+| `eframe` / `egui` | Cross-platform GUI framework |
 | `tray-icon` | Cross-platform system tray |
 | `muda` | Menu bar and context menus |
 | `notify-rust` | Desktop notifications |
-| `winit` | Event loop handling |
 | `serde` + `serde_json` | Data serialization |
 | `toml` | Configuration file parsing |
 | `chrono` | Date/time handling |
@@ -206,6 +229,7 @@ geekfit/
 | `rand` | Random interval generation |
 | `log` + `env_logger` | Logging |
 | `thiserror` + `anyhow` | Error handling |
+| `image` | Icon handling |
 
 ## License
 
@@ -222,4 +246,4 @@ Contributions welcome! Please:
 
 ---
 
-*Stay fit, write great code!* 💪🖥️
+*Stay fit, write great code!*

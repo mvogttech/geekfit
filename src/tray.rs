@@ -5,6 +5,8 @@
 
 use crate::config::Config;
 use crate::models::ExerciseType;
+#[allow(unused_imports)]
+use crate::storage::Storage;
 use anyhow::{Context, Result};
 use muda::{
     CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu,
@@ -267,25 +269,6 @@ impl TrayManager {
     }
 }
 
-/// Simple message dialog (cross-platform)
-pub fn show_message(title: &str, message: &str) {
-    // For now, just log it - in a real app you might use native dialogs
-    // or a simple GUI library like native-dialog
-    log::info!("Message Dialog - {}: {}", title, message);
-
-    // Also print to console for visibility
-    println!("\n=== {} ===\n{}\n", title, message);
-}
-
-/// Show settings info (since we don't have a full GUI)
-pub fn show_settings_info(config: &Config) {
-    let info = format!(
-        "{}\n\nTo modify settings, edit the config file at:\n{:?}",
-        config.settings_summary(),
-        Config::config_path().unwrap_or_default()
-    );
-    show_message("Geekfit Settings", &info);
-}
 
 #[cfg(test)]
 mod tests {
