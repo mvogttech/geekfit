@@ -1,0 +1,65 @@
+[package]
+name = "geekfit"
+version = "1.0.0"
+edition = "2021"
+authors = ["Geekfit Team"]
+description = "A gamified fitness tracker for programmers - stay fit while you code!"
+license = "MIT"
+repository = "https://github.com/geekfit/geekfit"
+keywords = ["fitness", "gamification", "tray", "health", "productivity"]
+categories = ["games", "gui"]
+
+[dependencies]
+# System tray functionality (cross-platform)
+tray-icon = "0.19"
+
+# Menu for tray context menu
+muda = "0.15"
+
+# Notifications (cross-platform)
+notify-rust = "4"
+
+# Serialization for config and data persistence
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Cross-platform directory paths
+dirs = "5"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Random number generation for random intervals
+rand = "0.8"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# For Windows event loop
+[target.'cfg(windows)'.dependencies]
+winit = "0.30"
+
+# For macOS event loop
+[target.'cfg(target_os = "macos")'.dependencies]
+winit = "0.30"
+
+# For Linux event loop
+[target.'cfg(target_os = "linux")'.dependencies]
+winit = "0.30"
+
+[profile.release]
+# Optimize for size while maintaining performance
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 0

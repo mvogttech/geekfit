@@ -1,0 +1,59 @@
+# Rust build artifacts
+/target/
+debug/
+release/
+
+# Cargo lock file (optional for binaries, include for libraries)
+# Uncomment if you want to track Cargo.lock
+# Cargo.lock
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Generated documentation
+/doc/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Log files
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Rust specific
+**/*.rs.bk
+*.pdb
+
+# Test output
+test-output/
+coverage/
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Claude
+.claude/
