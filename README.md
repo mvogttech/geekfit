@@ -238,6 +238,16 @@ MIT License - see [LICENSE](LICENSE) for details.
 - Theme colors from [Dracula](https://draculatheme.com/), [Nord](https://www.nordtheme.com/), [Catppuccin](https://catppuccin.com/)
 - Built with [Tauri](https://tauri.app/) and [Material UI](https://mui.com/)
 
+## Star History
+
+<a href="https://star-history.com/#mvogttech/geekfit&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=mvogttech/geekfit&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=mvogttech/geekfit&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=mvogttech/geekfit&type=Date" />
+ </picture>
+</a>
+
 ---
 
 **Stay fit, keep coding!**
