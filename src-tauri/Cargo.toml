@@ -39,7 +39,7 @@ chrono = { version = "0.4", features = ["serde"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 tokio = { version = "1", features = ["full"] }
 clap = { version = "4", features = ["derive"] }
-dirs = "5"
+dirs = "6"
 colored = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
