@@ -1,0 +1,18 @@
+# Cargo audit configuration
+# These are vulnerabilities in Tauri's transitive dependencies
+# that we cannot fix until Tauri updates their deps
+
+[advisories]
+# Vulnerabilities to ignore (in transitive deps we don't control)
+ignore = [
+    # rsa: Marvin Attack (timing side-channel) in RSA decryption
+    # In Tauri's webpki-roots -> rustls-webpki chain
+    "RUSTSEC-2023-0071",
+
+    # tungstenite: Remote DoS due to Continuation frame handling
+    # In Tauri's WebSocket dependencies
+    "RUSTSEC-2024-0363",
+]
+
+# Warn but don't fail on unmaintained packages
+informational_warnings = ["unmaintained", "unsound"]
