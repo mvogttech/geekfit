@@ -1,4 +1,4 @@
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{
@@ -17,8 +17,8 @@ pub struct Exercise {
     pub id: i64,
     pub name: String,
     pub xp_per_rep: i32,
-    pub total_xp: i64,        // XP earned for this specific exercise
-    pub current_level: i32,   // Level for this exercise (1-99)
+    pub total_xp: i64,      // XP earned for this specific exercise
+    pub current_level: i32, // Level for this exercise (1-99)
     pub icon: Option<String>,
     pub created_at: String,
 }
@@ -34,12 +34,12 @@ pub struct ExerciseLog {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserStats {
-    pub total_xp: i64,          // Sum of all exercise XP
-    pub total_level: i32,       // Sum of all exercise levels
+    pub total_xp: i64,    // Sum of all exercise XP
+    pub total_level: i32, // Sum of all exercise levels
     pub current_streak: i32,
     pub longest_streak: i32,
     pub last_exercise_date: Option<String>,
-    pub exercise_count: i32,    // Number of exercises (skills)
+    pub exercise_count: i32, // Number of exercises (skills)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -142,22 +142,26 @@ fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
     )?;
 
     // Migration: Add total_xp and current_level columns if they don't exist
-    let _ = conn.execute("ALTER TABLE exercises ADD COLUMN total_xp INTEGER DEFAULT 0", []);
-    let _ = conn.execute("ALTER TABLE exercises ADD COLUMN current_level INTEGER DEFAULT 1", []);
+    let _ = conn.execute(
+        "ALTER TABLE exercises ADD COLUMN total_xp INTEGER DEFAULT 0",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE exercises ADD COLUMN current_level INTEGER DEFAULT 1",
+        [],
+    );
 
     // Seed default exercises - desk/office friendly, no equipment needed
     let default_exercises: Vec<(&str, i32, &str)> = vec![
         // Upper body
         ("Pushups", 10, "fitness_center"),
         ("Arm Circles", 3, "self_improvement"),
-
         // Core
         ("Sit-ups", 8, "self_improvement"),
         ("Crunches", 6, "self_improvement"),
         ("Plank (10 sec)", 5, "self_improvement"),
         ("Leg Raises", 8, "self_improvement"),
         ("Mountain Climbers", 10, "self_improvement"),
-
         // Lower body
         ("Squats", 8, "fitness_center"),
         ("Lunges", 10, "fitness_center"),
@@ -165,14 +169,12 @@ fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
         ("Wall Sit (10 sec)", 4, "fitness_center"),
         ("Side Leg Raises", 6, "fitness_center"),
         ("Step-ups", 8, "fitness_center"),
-
         // Cardio
         ("Jumping Jacks", 6, "directions_run"),
         ("High Knees", 6, "directions_run"),
         ("Burpees", 15, "directions_run"),
         ("Stair Climbs", 10, "directions_run"),
         ("Marching in Place", 4, "directions_run"),
-
         // Stretches & Mobility (great for desk workers)
         ("Neck Stretches", 2, "accessibility"),
         ("Shoulder Shrugs", 3, "accessibility"),
@@ -201,15 +203,39 @@ fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
 
     // Seed achievements
     let achievements = vec![
-        ("first_exercise", "First Steps", "Complete your first exercise"),
-        ("hundred_pushups", "Century", "Complete 100 pushups in a single day"),
-        ("week_streak", "Dedicated", "Maintain a 7-day exercise streak"),
-        ("month_streak", "Committed", "Maintain a 30-day exercise streak"),
+        (
+            "first_exercise",
+            "First Steps",
+            "Complete your first exercise",
+        ),
+        (
+            "hundred_pushups",
+            "Century",
+            "Complete 100 pushups in a single day",
+        ),
+        (
+            "week_streak",
+            "Dedicated",
+            "Maintain a 7-day exercise streak",
+        ),
+        (
+            "month_streak",
+            "Committed",
+            "Maintain a 30-day exercise streak",
+        ),
         ("skill_10", "Rising Star", "Get any exercise to level 10"),
-        ("skill_25", "Fitness Warrior", "Get any exercise to level 25"),
+        (
+            "skill_25",
+            "Fitness Warrior",
+            "Get any exercise to level 25",
+        ),
         ("skill_50", "Legend", "Get any exercise to level 50"),
         ("total_100", "Century Club", "Reach 100 total level"),
-        ("variety", "Well-Rounded", "Log 5 different types of exercises"),
+        (
+            "variety",
+            "Well-Rounded",
+            "Log 5 different types of exercises",
+        ),
     ];
 
     for (key, name, desc) in achievements {
@@ -279,15 +305,22 @@ fn add_exercise(state: State<DbState>, name: String, xp_per_rep: i32) -> Result<
 #[tauri::command]
 fn delete_exercise(state: State<DbState>, id: i64) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM exercise_logs WHERE exercise_id = ?", params![id])
-        .map_err(|e| e.to_string())?;
+    conn.execute(
+        "DELETE FROM exercise_logs WHERE exercise_id = ?",
+        params![id],
+    )
+    .map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM exercises WHERE id = ?", params![id])
         .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
-fn log_exercise(state: State<DbState>, exercise_id: i64, reps: i32) -> Result<LogExerciseResult, String> {
+fn log_exercise(
+    state: State<DbState>,
+    exercise_id: i64,
+    reps: i32,
+) -> Result<LogExerciseResult, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
     // Get exercise info
@@ -380,7 +413,12 @@ fn log_exercise(state: State<DbState>, exercise_id: i64, reps: i32) -> Result<Lo
     })
 }
 
-fn check_achievements(conn: &Connection, exercise_level: i32, streak: i32, total_level: i32) -> Result<(), String> {
+fn check_achievements(
+    conn: &Connection,
+    exercise_level: i32,
+    streak: i32,
+    total_level: i32,
+) -> Result<(), String> {
     let today = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     // First exercise achievement
@@ -517,7 +555,9 @@ fn get_stats(state: State<DbState>) -> Result<UserStats, String> {
 fn get_achievements(state: State<DbState>) -> Result<Vec<Achievement>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, key, name, description, icon, unlocked_at FROM achievements ORDER BY id")
+        .prepare(
+            "SELECT id, key, name, description, icon, unlocked_at FROM achievements ORDER BY id",
+        )
         .map_err(|e| e.to_string())?;
 
     let achievements = stmt
@@ -737,7 +777,8 @@ fn export_data(state: State<DbState>) -> Result<String, String> {
 
 #[tauri::command]
 fn import_data(state: State<DbState>, json_data: String) -> Result<(), String> {
-    let data: ExportData = serde_json::from_str(&json_data).map_err(|e| format!("Invalid data format: {}", e))?;
+    let data: ExportData =
+        serde_json::from_str(&json_data).map_err(|e| format!("Invalid data format: {}", e))?;
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
     // Clear existing data
@@ -849,14 +890,12 @@ fn reset_all_data(state: State<DbState>) -> Result<(), String> {
         // Upper body
         ("Pushups", 10, "fitness_center"),
         ("Arm Circles", 3, "self_improvement"),
-
         // Core
         ("Sit-ups", 8, "self_improvement"),
         ("Crunches", 6, "self_improvement"),
         ("Plank (10 sec)", 5, "self_improvement"),
         ("Leg Raises", 8, "self_improvement"),
         ("Mountain Climbers", 10, "self_improvement"),
-
         // Lower body
         ("Squats", 8, "fitness_center"),
         ("Lunges", 10, "fitness_center"),
@@ -864,14 +903,12 @@ fn reset_all_data(state: State<DbState>) -> Result<(), String> {
         ("Wall Sit (10 sec)", 4, "fitness_center"),
         ("Side Leg Raises", 6, "fitness_center"),
         ("Step-ups", 8, "fitness_center"),
-
         // Cardio
         ("Jumping Jacks", 6, "directions_run"),
         ("High Knees", 6, "directions_run"),
         ("Burpees", 15, "directions_run"),
         ("Stair Climbs", 10, "directions_run"),
         ("Marching in Place", 4, "directions_run"),
-
         // Stretches & Mobility (great for desk workers)
         ("Neck Stretches", 2, "accessibility"),
         ("Shoulder Shrugs", 3, "accessibility"),
@@ -900,7 +937,13 @@ fn reset_all_data(state: State<DbState>) -> Result<(), String> {
 
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let open = MenuItem::with_id(app, "open", "Open Dashboard", true, None::<&str>)?;
-    let quick_log_window = MenuItem::with_id(app, "quick_log_window", "Quick Log... (Ctrl+Shift+Alt+G)", true, None::<&str>)?;
+    let quick_log_window = MenuItem::with_id(
+        app,
+        "quick_log_window",
+        "Quick Log... (Ctrl+Shift+Alt+G)",
+        true,
+        None::<&str>,
+    )?;
     let quit = MenuItem::with_id(app, "quit", "Quit GeekFit", true, None::<&str>)?;
 
     // Quick Log submenu with popular exercises
@@ -910,19 +953,26 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let pushups_5 = MenuItem::with_id(app, "log_1_5", "5 reps", true, None::<&str>)?;
     let pushups_10 = MenuItem::with_id(app, "log_1_10", "10 reps", true, None::<&str>)?;
     let pushups_20 = MenuItem::with_id(app, "log_1_20", "20 reps", true, None::<&str>)?;
-    let pushups_menu = Submenu::with_items(app, "Pushups", true, &[&pushups_5, &pushups_10, &pushups_20])?;
+    let pushups_menu = Submenu::with_items(
+        app,
+        "Pushups",
+        true,
+        &[&pushups_5, &pushups_10, &pushups_20],
+    )?;
 
     // Squats submenu
     let squats_5 = MenuItem::with_id(app, "log_8_5", "5 reps", true, None::<&str>)?;
     let squats_10 = MenuItem::with_id(app, "log_8_10", "10 reps", true, None::<&str>)?;
     let squats_20 = MenuItem::with_id(app, "log_8_20", "20 reps", true, None::<&str>)?;
-    let squats_menu = Submenu::with_items(app, "Squats", true, &[&squats_5, &squats_10, &squats_20])?;
+    let squats_menu =
+        Submenu::with_items(app, "Squats", true, &[&squats_5, &squats_10, &squats_20])?;
 
     // Sit-ups submenu
     let situps_5 = MenuItem::with_id(app, "log_3_5", "5 reps", true, None::<&str>)?;
     let situps_10 = MenuItem::with_id(app, "log_3_10", "10 reps", true, None::<&str>)?;
     let situps_20 = MenuItem::with_id(app, "log_3_20", "20 reps", true, None::<&str>)?;
-    let situps_menu = Submenu::with_items(app, "Sit-ups", true, &[&situps_5, &situps_10, &situps_20])?;
+    let situps_menu =
+        Submenu::with_items(app, "Sit-ups", true, &[&situps_5, &situps_10, &situps_20])?;
 
     // Jumping Jacks submenu
     let jj_10 = MenuItem::with_id(app, "log_14_10", "10 reps", true, None::<&str>)?;
@@ -941,7 +991,8 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     let shoulder_5 = MenuItem::with_id(app, "log_20_5", "5 reps", true, None::<&str>)?;
     let shoulder_10 = MenuItem::with_id(app, "log_20_10", "10 reps", true, None::<&str>)?;
-    let shoulder_menu = Submenu::with_items(app, "Shoulder Shrugs", true, &[&shoulder_5, &shoulder_10])?;
+    let shoulder_menu =
+        Submenu::with_items(app, "Shoulder Shrugs", true, &[&shoulder_5, &shoulder_10])?;
 
     // Stretches parent submenu
     let stretches_menu = Submenu::with_items(
@@ -972,7 +1023,14 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = Menu::with_items(
         app,
-        &[&open, &quick_log_window, &separator2, &quick_log_menu, &separator3, &quit],
+        &[
+            &open,
+            &quick_log_window,
+            &separator2,
+            &quick_log_menu,
+            &separator3,
+            &quit,
+        ],
     )?;
 
     let _tray = TrayIconBuilder::new()
@@ -1131,7 +1189,9 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn setup_global_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+    use tauri_plugin_global_shortcut::{
+        Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+    };
 
     // Register Ctrl+Shift+Alt+G for quick log
     let shortcut = Shortcut::new(
@@ -1143,24 +1203,26 @@ fn setup_global_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::Err
     let _ = app.global_shortcut().unregister(shortcut);
 
     // Register the shortcut with explicit state handling
-    match app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
-        // Only trigger on key press, not release
-        if event.state == ShortcutState::Pressed {
-            log::info!("Global shortcut Ctrl+Shift+Alt+G triggered");
+    match app
+        .global_shortcut()
+        .on_shortcut(shortcut, |app, _shortcut, event| {
+            // Only trigger on key press, not release
+            if event.state == ShortcutState::Pressed {
+                log::info!("Global shortcut Ctrl+Shift+Alt+G triggered");
 
-            // Show and focus the window (unminimize if needed)
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+                // Show and focus the window (unminimize if needed)
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
 
-            // Emit event to frontend to open quick log
-            if let Err(e) = app.emit("global-quick-log", ()) {
-                log::error!("Failed to emit global-quick-log event: {}", e);
+                // Emit event to frontend to open quick log
+                if let Err(e) = app.emit("global-quick-log", ()) {
+                    log::error!("Failed to emit global-quick-log event: {}", e);
+                }
             }
-        }
-    }) {
+        }) {
         Ok(_) => {
             log::info!("Successfully registered global shortcut Ctrl+Shift+Alt+G");
         }
@@ -1323,7 +1385,11 @@ mod tests {
             .unwrap();
 
         // Should have default exercises
-        assert!(count > 20, "Should have at least 20 default exercises, got {}", count);
+        assert!(
+            count > 20,
+            "Should have at least 20 default exercises, got {}",
+            count
+        );
     }
 
     #[test]
@@ -1336,7 +1402,11 @@ mod tests {
             .unwrap();
 
         // Should have achievements
-        assert!(count >= 9, "Should have at least 9 achievements, got {}", count);
+        assert!(
+            count >= 9,
+            "Should have at least 9 achievements, got {}",
+            count
+        );
     }
 
     #[test]

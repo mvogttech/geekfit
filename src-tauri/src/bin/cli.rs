@@ -128,7 +128,11 @@ fn find_exercise(conn: &Connection, search: &str) -> Result<(i64, String, i32), 
     }
 }
 
-fn log_exercise(conn: &Connection, exercise_id: i64, reps: i32) -> Result<(i32, i32, bool), String> {
+fn log_exercise(
+    conn: &Connection,
+    exercise_id: i64,
+    reps: i32,
+) -> Result<(i32, i32, bool), String> {
     // Get current exercise stats
     let (xp_per_rep, old_xp, old_level): (i32, i64, i32) = conn
         .query_row(
@@ -259,7 +263,10 @@ fn cmd_log(exercise: &str, reps: i32) {
         Ok(e) => e,
         Err(e) => {
             eprintln!("{} {}", "Error:".red().bold(), e);
-            eprintln!("\nUse {} to see available exercises.", "geekfit list".cyan());
+            eprintln!(
+                "\nUse {} to see available exercises.",
+                "geekfit list".cyan()
+            );
             std::process::exit(1);
         }
     };
@@ -450,12 +457,22 @@ fn cmd_history(days: i32) {
         .collect();
 
     println!();
-    println!("{}", format!(" LAST {} DAYS ", days).on_yellow().black().bold());
+    println!(
+        "{}",
+        format!(" LAST {} DAYS ", days).on_yellow().black().bold()
+    );
     println!();
 
     if logs.is_empty() {
-        println!("  {} No exercises logged in the last {} days.", "!".yellow(), days);
-        println!("  Use {} to log an exercise.", "geekfit log <exercise> <reps>".cyan());
+        println!(
+            "  {} No exercises logged in the last {} days.",
+            "!".yellow(),
+            days
+        );
+        println!(
+            "  Use {} to log an exercise.",
+            "geekfit log <exercise> <reps>".cyan()
+        );
     } else {
         println!(
             "  {:<20} {:>6} {:>8} {}",
@@ -468,7 +485,9 @@ fn cmd_history(days: i32) {
 
         for (name, reps, xp, logged_at) in logs {
             // Parse and format date
-            let date_str = if let Ok(parsed) = chrono::NaiveDateTime::parse_from_str(&logged_at, "%Y-%m-%d %H:%M:%S") {
+            let date_str = if let Ok(parsed) =
+                chrono::NaiveDateTime::parse_from_str(&logged_at, "%Y-%m-%d %H:%M:%S")
+            {
                 let now = chrono::Local::now().naive_local();
                 let diff = now.date() - parsed.date();
 
@@ -554,7 +573,11 @@ fn cmd_today() {
     println!("{}", " TODAY'S PROGRESS ".on_cyan().black().bold());
     println!();
 
-    let bar_char = if progress >= 1.0 { "=".green() } else { "=".yellow() };
+    let bar_char = if progress >= 1.0 {
+        "=".green()
+    } else {
+        "=".yellow()
+    };
     let progress_bar = format!(
         "  [{}{}] {} / {} XP",
         bar_char.to_string().repeat(filled),
@@ -614,7 +637,9 @@ fn cmd_quick(search: &str) {
         .expect("Failed to prepare statement");
 
     let exercises: Vec<(String, i32, i32)> = stmt
-        .query_map([&pattern], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .query_map([&pattern], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })
         .expect("Failed to query")
         .filter_map(|r| r.ok())
         .collect();
