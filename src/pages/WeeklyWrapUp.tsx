@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import {
   Box,
   Typography,
@@ -9,7 +9,6 @@ import {
   IconButton,
   Tooltip,
   Divider,
-  Button,
 } from "@mui/material";
 import ShareIcon from "@mui/icons-material/Share";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -18,7 +17,6 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
 import { toPng } from "html-to-image";
 import { useExercises } from "../contexts/ExerciseContext";

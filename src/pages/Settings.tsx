@@ -53,7 +53,7 @@ import { useUser } from "../contexts/UserContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useLocale } from "../contexts/LocaleContext";
 import { useOnboarding } from "../components/Onboarding";
-import { THEME_CONFIGS, ThemeId } from "../themes";
+import { ThemeId } from "../themes";
 import {
   playReminderSound,
   playLevelUpSound,

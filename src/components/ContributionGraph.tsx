@@ -88,7 +88,7 @@ export default function ContributionGraph({
     const groups: typeof gridData[] = [];
     let currentWeek: typeof gridData = [];
 
-    gridData.forEach((day, index) => {
+    gridData.forEach((day) => {
       if (day.dayOfWeek === 0 && currentWeek.length > 0) {
         groups.push(currentWeek);
         currentWeek = [];
@@ -130,18 +130,6 @@ export default function ContributionGraph({
   const totalExercises = gridData.reduce((sum, d) => sum + d.count, 0);
   const totalXp = gridData.reduce((sum, d) => sum + d.xp, 0);
   const activeDays = gridData.filter((d) => d.count > 0).length;
-  const currentStreak = useMemo(() => {
-    let streak = 0;
-    for (let i = gridData.length - 1; i >= 0; i--) {
-      if (gridData[i].count > 0) {
-        streak++;
-      } else if (i < gridData.length - 1) {
-        // Allow today to be 0 if yesterday had activity
-        break;
-      }
-    }
-    return streak;
-  }, [gridData]);
 
   return (
     <Box>

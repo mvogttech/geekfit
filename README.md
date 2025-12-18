@@ -60,7 +60,7 @@ A gamified fitness tracker designed for programmers who spend long hours at thei
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/geekfit.git
+git clone https://github.com/mvogttech/geekfit.git
 cd geekfit
 
 # Install dependencies
@@ -78,6 +78,15 @@ npm run tauri build
 ```
 
 The installer will be in `src-tauri/target/release/bundle/`.
+
+## Screenshots
+
+![Dashboard](docs/screenshot.png)
+![Exercise Management](docs/exercises.png)
+![Wellness Hub](docs/wellness.png)
+![Weekly Wrap-Up](docs/weekly-recap.png)
+![Achievements](docs/achievements.png)
+![Settings](docs/settings.png)
 
 ## CLI Tool
 

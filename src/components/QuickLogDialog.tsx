@@ -185,7 +185,7 @@ export default function QuickLogDialog({
                 const tierColors = TIER_COLORS[tier];
 
                 return (
-                  <Grid item xs={4} key={exercise.id}>
+                  <Grid size={{ xs: 4 }} key={exercise.id}>
                     <Box
                       onClick={() => setSelectedExercise(exercise)}
                       sx={{

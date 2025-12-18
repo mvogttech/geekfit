@@ -9,7 +9,6 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import {
   isPermissionGranted,
-  requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { playReminderSound } from "../utils/sounds";
@@ -281,7 +280,7 @@ export function WellnessProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let activityTimeout: NodeJS.Timeout;
+    let activityTimeout: ReturnType<typeof setTimeout>;
     let focusStartTime: Date | null = null;
 
     const handleActivity = () => {

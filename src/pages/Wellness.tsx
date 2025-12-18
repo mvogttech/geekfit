@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Box,
   Typography,
@@ -6,10 +5,8 @@ import {
   CardContent,
   Switch,
   FormControlLabel,
-  Slider,
   Button,
   IconButton,
-  LinearProgress,
   Chip,
   Stack,
   Tooltip,
@@ -25,7 +22,6 @@ import PsychologyIcon from "@mui/icons-material/Psychology";
 import TipsAndUpdatesIcon from "@mui/icons-material/TipsAndUpdates";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useWellness, ERGONOMIC_TIPS } from "../contexts/WellnessContext";
 

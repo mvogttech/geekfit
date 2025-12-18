@@ -5,16 +5,10 @@ import {
   Button,
   Dialog,
   DialogContent,
-  Stepper,
-  Step,
-  StepLabel,
-  MobileStepper,
   Fade,
-  Slide,
   Paper,
   IconButton,
   useTheme,
-  useMediaQuery,
 } from "@mui/material";
 import KeyboardArrowLeft from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
@@ -111,7 +105,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [open, setOpen] = useState(true);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const maxSteps = ONBOARDING_STEPS.length;
   const currentStep = ONBOARDING_STEPS[activeStep];

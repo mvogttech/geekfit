@@ -55,7 +55,6 @@ export default function PomodoroTimer({ compact = false, onExerciseBreak }: Pomo
     setBreakDuration,
   } = usePomodoro();
 
-  const [expanded, setExpanded] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   const colors = PHASE_COLORS[phase];

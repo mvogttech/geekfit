@@ -112,7 +112,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      const { key, ctrlKey, shiftKey, altKey, metaKey } = event;
+      const { key, ctrlKey, shiftKey, altKey } = event;
 
       // Don't trigger shortcuts when typing in input fields
       const target = event.target as HTMLElement;
