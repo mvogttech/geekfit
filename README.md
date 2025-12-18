@@ -1,6 +1,6 @@
 # GeekFit
 
-[![CI](https://github.com/yourusername/geekfit/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/geekfit/actions/workflows/ci.yml)
+[![CI](https://github.com/mvogttech/geekfit/actions/workflows/ci.yml/badge.svg)](https://github.com/mvogttech/geekfit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A gamified fitness tracker designed for programmers who spend long hours at their desks. Level up your exercises, earn XP, unlock achievements, and maintain healthy habits - all with a beautiful desktop app that respects your workflow.
@@ -10,12 +10,14 @@ A gamified fitness tracker designed for programmers who spend long hours at thei
 ## Features
 
 ### Core Fitness Tracking
+
 - **Exercise Logging** - Track 25+ desk-friendly exercises (pushups, squats, stretches, etc.)
 - **XP System** - RuneScape-inspired exponential leveling (1-99 per exercise)
 - **Streak Tracking** - Build daily exercise streaks with visual feedback
 - **Quick Log** - Global hotkey `Ctrl+Shift+Alt+G` to log exercises without breaking flow
 
 ### Gamification
+
 - **Per-Exercise Levels** - Each exercise has its own level (1-99)
 - **Total Level** - Combined level across all exercises
 - **Achievements** - Unlock badges for milestones (7-day streak, Level 50, etc.)
@@ -23,6 +25,7 @@ A gamified fitness tracker designed for programmers who spend long hours at thei
 - **Titles** - Earn titles like "Novice Geek" to "Legendary Geek"
 
 ### Wellness Hub
+
 - **Eye Care (20-20-20 Rule)** - Reminders to look away from screen
 - **Hydration Tracking** - Log water intake with daily goals
 - **Posture Reminders** - Periodic posture check notifications
@@ -30,6 +33,7 @@ A gamified fitness tracker designed for programmers who spend long hours at thei
 - **Focus Mode Detection** - Auto-pause notifications during deep work
 
 ### Developer Experience
+
 - **10 Developer Themes** - Dracula, Nord, Monokai, Solarized, GitHub Dark, One Dark, Catppuccin, and more
 - **Keyboard-First Navigation** - `Ctrl+1-6` for pages, `Ctrl+/` for shortcuts
 - **CLI Tool** - Log exercises from terminal: `geekfit-cli log pushups 20`
@@ -37,6 +41,7 @@ A gamified fitness tracker designed for programmers who spend long hours at thei
 - **Shareable Fitness Commit Cards** - Git-style commit messages for social sharing
 
 ### Additional Features
+
 - **System Tray** - Runs in background, double-click to open
 - **Desktop Notifications** - Customizable reminder intervals
 - **Data Export/Import** - Full JSON backup and restore
@@ -47,6 +52,7 @@ A gamified fitness tracker designed for programmers who spend long hours at thei
 ## Installation
 
 ### Prerequisites
+
 - [Node.js](https://nodejs.org/) (v18+)
 - [Rust](https://rustup.rs/) (latest stable)
 
@@ -99,17 +105,17 @@ geekfit-cli quick push        # Fuzzy search exercises
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
+| Shortcut           | Action                                   |
+| ------------------ | ---------------------------------------- |
 | `Ctrl+Shift+Alt+G` | Quick Log (global, works when minimized) |
-| `Ctrl+1` | Dashboard |
-| `Ctrl+2` | Exercises |
-| `Ctrl+3` | Achievements |
-| `Ctrl+4` | History |
-| `Ctrl+5` | Weekly Wrap-Up |
-| `Ctrl+6` | Wellness |
-| `Ctrl+,` | Settings |
-| `Ctrl+/` | Show all shortcuts |
+| `Ctrl+1`           | Dashboard                                |
+| `Ctrl+2`           | Exercises                                |
+| `Ctrl+3`           | Achievements                             |
+| `Ctrl+4`           | History                                  |
+| `Ctrl+5`           | Weekly Wrap-Up                           |
+| `Ctrl+6`           | Wellness                                 |
+| `Ctrl+,`           | Settings                                 |
+| `Ctrl+/`           | Show all shortcuts                       |
 
 ## Tech Stack
 
@@ -158,18 +164,18 @@ Each exercise levels independently, and your total level is the sum of all exerc
 
 Choose from 10 developer-favorite themes:
 
-| Theme | Colors |
-|-------|--------|
-| GeekFit Dark | Cyan/Teal on dark |
-| GeekFit Light | Cyan/Teal on light |
-| Dracula | Purple/Pink/Green |
-| Nord | Blue/Frost |
-| Monokai | Yellow/Pink/Green |
-| Solarized Dark | Blue/Orange |
-| Solarized Light | Blue/Orange |
-| GitHub Dark | Blue/Green |
-| One Dark | Blue/Purple |
-| Catppuccin | Mauve/Pink |
+| Theme           | Colors             |
+| --------------- | ------------------ |
+| GeekFit Dark    | Cyan/Teal on dark  |
+| GeekFit Light   | Cyan/Teal on light |
+| Dracula         | Purple/Pink/Green  |
+| Nord            | Blue/Frost         |
+| Monokai         | Yellow/Pink/Green  |
+| Solarized Dark  | Blue/Orange        |
+| Solarized Light | Blue/Orange        |
+| GitHub Dark     | Blue/Green         |
+| One Dark        | Blue/Purple        |
+| Catppuccin      | Mauve/Pink         |
 
 ## Contributing
 
