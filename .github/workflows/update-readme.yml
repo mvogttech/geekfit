@@ -1,0 +1,71 @@
+name: Update README Downloads
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-readme:
+    name: Update Download Links
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Update README with latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          # Get release info
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/latest"
+
+          # Generate download links section
+          cat > /tmp/downloads.md << 'EOF'
+          ### Give me the .exe/.dmg!
+
+          Download the latest release (**$RELEASE_TAG**) for your platform:
+
+          | Platform | Download |
+          |----------|----------|
+          | Windows | [GeekFit_${RELEASE_TAG#v}_x64-setup.exe]($RELEASE_URL/download/GeekFit_${RELEASE_TAG#v}_x64-setup.exe) |
+          | macOS (Intel) | [GeekFit_${RELEASE_TAG#v}_x64.dmg]($RELEASE_URL/download/GeekFit_${RELEASE_TAG#v}_x64.dmg) |
+          | macOS (Apple Silicon) | [GeekFit_${RELEASE_TAG#v}_aarch64.dmg]($RELEASE_URL/download/GeekFit_${RELEASE_TAG#v}_aarch64.dmg) |
+          | Linux (AppImage) | [GeekFit_${RELEASE_TAG#v}_amd64.AppImage]($RELEASE_URL/download/GeekFit_${RELEASE_TAG#v}_amd64.AppImage) |
+          | Linux (deb) | [GeekFit_${RELEASE_TAG#v}_amd64.deb]($RELEASE_URL/download/GeekFit_${RELEASE_TAG#v}_amd64.deb) |
+
+          Or browse all releases on the [Releases page]($RELEASE_URL).
+
+          ![Releases Page](docs/nerds.png)
+          EOF
+
+          # Replace variables in the template
+          sed -i "s|\$RELEASE_TAG|$RELEASE_TAG|g" /tmp/downloads.md
+          sed -i "s|\$RELEASE_URL|$RELEASE_URL|g" /tmp/downloads.md
+          sed -i "s|\${RELEASE_TAG#v}|${RELEASE_TAG#v}|g" /tmp/downloads.md
+
+          # Update README - replace the download section
+          # Find and replace between "### Give me" and "### Prerequisites"
+          awk '
+            /^### Give me/ { skip=1; next }
+            /^### Prerequisites/ { skip=0; print ""; }
+            !skip { print }
+          ' README.md > /tmp/readme_cleaned.md
+
+          # Insert new download section before Prerequisites
+          awk -v downloads="$(cat /tmp/downloads.md)" '
+            /^### Prerequisites/ { print downloads; print "" }
+            { print }
+          ' /tmp/readme_cleaned.md > README.md
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add README.md
+          git diff --quiet --staged || git commit -m "docs: update download links for ${{ github.event.release.tag_name }}"
+          git push

@@ -53,6 +53,20 @@ A gamified fitness tracker designed for programmers who spend long hours at thei
 
 ## Installation
 
+### Give me the .exe/.dmg!
+
+| Platform | Download |
+|----------|----------|
+| Windows | [GeekFit_x64-setup.exe](https://github.com/mvogttech/geekfit/releases/latest) |
+| macOS (Intel) | [GeekFit_x64.dmg](https://github.com/mvogttech/geekfit/releases/latest) |
+| macOS (Apple Silicon) | [GeekFit_aarch64.dmg](https://github.com/mvogttech/geekfit/releases/latest) |
+| Linux (AppImage) | [GeekFit_amd64.AppImage](https://github.com/mvogttech/geekfit/releases/latest) |
+| Linux (deb) | [GeekFit_amd64.deb](https://github.com/mvogttech/geekfit/releases/latest) |
+
+Or browse all assets on the [Releases page](https://github.com/mvogttech/geekfit/releases).
+
+![Releases Page](docs/nerds.png)
+
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v18+)
