@@ -1,5 +1,8 @@
 # GeekFit
 
+[![CI](https://github.com/yourusername/geekfit/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/geekfit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A gamified fitness tracker designed for programmers who spend long hours at their desks. Level up your exercises, earn XP, unlock achievements, and maintain healthy habits - all with a beautiful desktop app that respects your workflow.
 
 ![GeekFit Screenshot](docs/screenshot.png)
@@ -170,19 +173,29 @@ Choose from 10 developer-favorite themes:
 
 ## Contributing
 
-Contributions are welcome! Areas where help is needed:
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+Areas where help is needed:
 
 - **Translations** - Add your language to `src/i18n/index.ts`
 - **Themes** - Create new themes in `src/themes/index.ts`
 - **Exercises** - Suggest desk-friendly exercises
 - **Badges** - Design new achievement badges
+- **Tests** - Improve test coverage
 
-### Adding a Translation
+### Quick Start for Contributors
 
-1. Add your locale to `SUPPORTED_LOCALES` in `src/i18n/index.ts`
-2. Copy the `en` translations object
-3. Translate all strings
-4. Submit a PR
+```bash
+# Run tests
+cd src-tauri && cargo test
+
+# Check TypeScript
+npx tsc --noEmit
+
+# Check formatting
+cargo fmt -- --check
+cargo clippy -- -D warnings
+```
 
 ## License
 

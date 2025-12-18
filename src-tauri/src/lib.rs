@@ -1228,3 +1228,147 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+// ============ Tests ============
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_xp_for_level_1() {
+        assert_eq!(xp_for_level(1), 0);
+    }
+
+    #[test]
+    fn test_xp_for_level_2() {
+        // Level 2 should require some XP
+        let xp = xp_for_level(2);
+        assert!(xp > 0);
+        assert!(xp < 100); // Should be relatively small
+    }
+
+    #[test]
+    fn test_xp_increases_with_level() {
+        // XP requirements should increase with each level
+        for level in 2..99 {
+            assert!(
+                xp_for_level(level + 1) > xp_for_level(level),
+                "XP for level {} should be greater than level {}",
+                level + 1,
+                level
+            );
+        }
+    }
+
+    #[test]
+    fn test_xp_for_level_99() {
+        // Level 99 should require significant XP (RuneScape style)
+        let xp = xp_for_level(99);
+        assert!(xp > 10_000_000, "Level 99 should require over 10M XP");
+    }
+
+    #[test]
+    fn test_level_from_xp_zero() {
+        assert_eq!(level_from_xp(0), 1);
+    }
+
+    #[test]
+    fn test_level_from_xp_basic() {
+        // With 0 XP, should be level 1
+        assert_eq!(level_from_xp(0), 1);
+
+        // With some XP, should level up
+        let xp_for_2 = xp_for_level(2);
+        assert_eq!(level_from_xp(xp_for_2), 2);
+        assert_eq!(level_from_xp(xp_for_2 - 1), 1);
+    }
+
+    #[test]
+    fn test_level_from_xp_max() {
+        // Even with huge XP, max level is 99
+        assert_eq!(level_from_xp(100_000_000), 99);
+        assert_eq!(level_from_xp(i64::MAX / 2), 99);
+    }
+
+    #[test]
+    fn test_level_xp_roundtrip() {
+        // For each level, getting XP for that level and converting back should give same level
+        for level in 1..=99 {
+            let xp = xp_for_level(level);
+            assert_eq!(
+                level_from_xp(xp),
+                level,
+                "XP {} should give level {}",
+                xp,
+                level
+            );
+        }
+    }
+
+    #[test]
+    fn test_database_initialization() {
+        // Test that database initializes without error
+        let conn = Connection::open_in_memory().unwrap();
+        assert!(init_database(&conn).is_ok());
+    }
+
+    #[test]
+    fn test_default_exercises_created() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_database(&conn).unwrap();
+
+        let count: i32 = conn
+            .query_row("SELECT COUNT(*) FROM exercises", [], |row| row.get(0))
+            .unwrap();
+
+        // Should have default exercises
+        assert!(count > 20, "Should have at least 20 default exercises, got {}", count);
+    }
+
+    #[test]
+    fn test_default_achievements_created() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_database(&conn).unwrap();
+
+        let count: i32 = conn
+            .query_row("SELECT COUNT(*) FROM achievements", [], |row| row.get(0))
+            .unwrap();
+
+        // Should have achievements
+        assert!(count >= 9, "Should have at least 9 achievements, got {}", count);
+    }
+
+    #[test]
+    fn test_user_stats_initialized() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_database(&conn).unwrap();
+
+        let (streak, longest): (i32, i32) = conn
+            .query_row(
+                "SELECT current_streak, longest_streak FROM user_stats WHERE id = 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(streak, 0);
+        assert_eq!(longest, 0);
+    }
+
+    #[test]
+    fn test_settings_initialized() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_database(&conn).unwrap();
+
+        let reminder: String = conn
+            .query_row(
+                "SELECT value FROM settings WHERE key = 'reminder_enabled'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(reminder, "true");
+    }
+}
