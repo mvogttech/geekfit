@@ -1,6 +1,8 @@
 # GeekFit
 
 [![CI](https://github.com/mvogttech/geekfit/actions/workflows/ci.yml/badge.svg)](https://github.com/mvogttech/geekfit/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/mvogttech/geekfit/actions/workflows/codeql.yml/badge.svg)](https://github.com/mvogttech/geekfit/actions/workflows/codeql.yml)
+[![Security Scan](https://github.com/mvogttech/geekfit/actions/workflows/security.yml/badge.svg)](https://github.com/mvogttech/geekfit/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A gamified fitness tracker designed for programmers who spend long hours at their desks. Level up your exercises, earn XP, unlock achievements, and maintain healthy habits - all with a beautiful desktop app that respects your workflow.
