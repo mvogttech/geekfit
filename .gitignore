@@ -1,59 +1,37 @@
-# Rust build artifacts
-/target/
-debug/
-release/
+# Dependencies
+node_modules/
 
-# Cargo lock file (optional for binaries, include for libraries)
-# Uncomment if you want to track Cargo.lock
-# Cargo.lock
+# Build output
+dist/
+src-tauri/target/
 
-# IDE and editor files
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Generated documentation
-/doc/
-
-# Backup files
-*.bak
-*.backup
-*.orig
-
-# Log files
-*.log
-logs/
-
-# Environment files
+# Environment
 .env
 .env.local
 .env.*.local
 
-# OS generated files
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
+Thumbs.db
 
-# Rust specific
-**/*.rs.bk
-*.pdb
+# Logs
+logs/
+*.log
+npm-debug.log*
 
-# Test output
-test-output/
-coverage/
+# Tauri
+src-tauri/gen/
 
-# Build artifacts
-*.exe
-*.dll
-*.so
-*.dylib
+# SQLite database (for development)
+*.db
+*.db-journal
 
-# Claude
+#Claude
+.claude-local/
 .claude/
