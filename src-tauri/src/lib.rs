@@ -1399,11 +1399,7 @@ mod tests {
             .unwrap();
 
         // Exercises are added through onboarding, not on init
-        assert_eq!(
-            count, 0,
-            "Should have no exercises on init, got {}",
-            count
-        );
+        assert_eq!(count, 0, "Should have no exercises on init, got {}", count);
     }
 
     #[test]
