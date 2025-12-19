@@ -1,6 +1,6 @@
 {
   "name": "geekfit",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Gamified fitness tracker for programmers",
   "type": "module",
   "scripts": {
@@ -25,6 +25,7 @@
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-opener": "^2.5.2",
+    "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-sql": "^2.3.1",
     "@tauri-apps/plugin-store": "^2.4.1",
     "canvas-confetti": "^1.9.4",

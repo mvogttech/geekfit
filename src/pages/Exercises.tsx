@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -20,7 +20,9 @@ import {
   ListItemIcon,
   ListItemText,
   Chip,
+  Autocomplete,
 } from "@mui/material";
+import { invoke } from "@tauri-apps/api/core";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -33,11 +35,19 @@ import {
   TIER_COLORS,
   getExerciseIcon,
 } from "../utils/xp";
-import { Exercise, LogExerciseResult } from "../types";
+import { Exercise, LogExerciseResult, DefaultExercise } from "../types";
 
 export default function Exercises() {
   const { exercises, addExercise, deleteExercise, logExercise, loading } =
     useExercises();
+
+  // Default exercises for autocomplete
+  const [defaultExercises, setDefaultExercises] = useState<DefaultExercise[]>([]);
+
+  // Fetch default exercises on mount
+  useEffect(() => {
+    invoke<DefaultExercise[]>("get_default_exercises").then(setDefaultExercises);
+  }, []);
 
   // Add exercise dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -446,14 +456,53 @@ export default function Exercises() {
       >
         <DialogTitle>Add New Exercise</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            label="Exercise Name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            margin="normal"
-            placeholder="e.g., Squats, Planks, Lunges"
+          <Autocomplete
+            freeSolo
+            options={defaultExercises.filter(
+              (de) => !exercises.some((e) => e.name === de.name)
+            )}
+            groupBy={(option) => (typeof option === "string" ? "" : option.category)}
+            getOptionLabel={(option) =>
+              typeof option === "string" ? option : option.name
+            }
+            renderOption={(props, option) => {
+              const { key, ...rest } = props;
+              return (
+                <Box
+                  component="li"
+                  key={key}
+                  {...rest}
+                  sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2 }}
+                >
+                  <Typography sx={{ flexGrow: 1 }}>
+                    {typeof option === "string" ? option : option.name}
+                  </Typography>
+                  {typeof option !== "string" && (
+                    <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, ml: 2 }}>
+                      {option.xp_per_rep} XP/rep
+                    </Typography>
+                  )}
+                </Box>
+              );
+            }}
+            inputValue={newName}
+            onInputChange={(_, value) => setNewName(value)}
+            onChange={(_, value) => {
+              if (value && typeof value !== "string") {
+                setNewName(value.name);
+                setNewXp(value.xp_per_rep);
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                autoFocus
+                fullWidth
+                label="Exercise Name"
+                margin="normal"
+                placeholder="Type or select an exercise"
+              />
+            )}
           />
           <TextField
             fullWidth

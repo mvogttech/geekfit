@@ -133,8 +133,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   useEffect(() => {
     invoke<DefaultExercise[]>("get_default_exercises").then((exercises) => {
       setDefaultExercises(exercises);
-      // Select all exercises by default
-      setSelectedExercises(new Set(exercises.map((e) => e.name)));
+      // No exercises selected by default - user must choose
     });
   }, []);
 

@@ -46,6 +46,7 @@ import KeyboardIcon from "@mui/icons-material/Keyboard";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { version } from "../../package.json";
 import {
   isPermissionGranted,
@@ -336,12 +337,10 @@ export default function Settings() {
   const handleResetData = async () => {
     try {
       await invoke("reset_all_data");
-      await refreshStats();
-      setSnackbar({
-        open: true,
-        message: "All data has been reset",
-        severity: "success",
-      });
+      // Clear onboarding flag so it shows again on relaunch
+      localStorage.removeItem("geekfit_onboarding_complete");
+      // Relaunch the app to start fresh with onboarding
+      await relaunch();
     } catch (error) {
       console.error("Failed to reset data:", error);
       setSnackbar({
@@ -349,7 +348,6 @@ export default function Settings() {
         message: "Failed to reset data",
         severity: "error",
       });
-    } finally {
       setResetDialogOpen(false);
     }
   };

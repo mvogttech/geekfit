@@ -192,27 +192,7 @@ fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
         [],
     );
 
-    // Check if initial setup is already complete - if so, don't re-seed exercises
-    let setup_complete: bool = conn
-        .query_row(
-            "SELECT value FROM settings WHERE key = 'initial_setup_complete'",
-            [],
-            |row| row.get::<_, String>(0),
-        )
-        .map(|v| v == "true")
-        .unwrap_or(false);
-
-    // Only seed default exercises on first run (before initial setup is complete)
-    if !setup_complete {
-        let default_exercises = get_default_exercises_list();
-
-        for (name, xp, icon, _category) in default_exercises {
-            conn.execute(
-                "INSERT OR IGNORE INTO exercises (name, xp_per_rep, icon, total_xp, current_level) VALUES (?, ?, ?, 0, 1)",
-                params![name, xp, icon],
-            )?;
-        }
-    }
+    // No default exercises - users add exercises through onboarding
 
     // Seed user stats
     conn.execute(
@@ -362,34 +342,19 @@ fn complete_initial_setup(
 ) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
-    // Get all default exercise names
+    // Get default exercises with their details
     let default_exercises = get_default_exercises_list();
-    let default_names: Vec<&str> = default_exercises
-        .iter()
-        .map(|(name, _, _, _)| *name)
-        .collect();
 
-    // Delete exercises that are in defaults but not selected
-    for name in &default_names {
-        if !selected_exercises.contains(&name.to_string()) {
-            // Delete exercise logs first (foreign key constraint)
+    // Add only the selected exercises
+    for (name, xp, icon, _category) in default_exercises {
+        if selected_exercises.contains(&name.to_string()) {
             conn.execute(
-                "DELETE FROM exercise_logs WHERE exercise_id IN (SELECT id FROM exercises WHERE name = ?)",
-                params![name],
+                "INSERT OR IGNORE INTO exercises (name, xp_per_rep, icon, total_xp, current_level) VALUES (?, ?, ?, 0, 1)",
+                params![name, xp, icon],
             )
             .map_err(|e| e.to_string())?;
-            // Delete the exercise
-            conn.execute("DELETE FROM exercises WHERE name = ?", params![name])
-                .map_err(|e| e.to_string())?;
         }
     }
-
-    // Mark initial setup as complete so exercises won't be re-seeded
-    conn.execute(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES ('initial_setup_complete', 'true')",
-        [],
-    )
-    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -954,6 +919,8 @@ fn import_data(state: State<DbState>, json_data: String) -> Result<(), String> {
 #[tauri::command]
 fn reset_all_data(state: State<DbState>) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
+
+    // Clear all data - user must go through onboarding to add exercises again
     conn.execute_batch(
         "
         DELETE FROM exercise_logs;
@@ -963,51 +930,6 @@ fn reset_all_data(state: State<DbState>) -> Result<(), String> {
         ",
     )
     .map_err(|e| e.to_string())?;
-
-    // Re-seed default exercises - desk/office friendly, no equipment needed
-    let default_exercises: Vec<(&str, i32, &str)> = vec![
-        // Upper body
-        ("Pushups", 10, "fitness_center"),
-        ("Arm Circles", 3, "self_improvement"),
-        // Core
-        ("Sit-ups", 8, "self_improvement"),
-        ("Crunches", 6, "self_improvement"),
-        ("Plank (10 sec)", 5, "self_improvement"),
-        ("Leg Raises", 8, "self_improvement"),
-        ("Mountain Climbers", 10, "self_improvement"),
-        // Lower body
-        ("Squats", 8, "fitness_center"),
-        ("Lunges", 10, "fitness_center"),
-        ("Calf Raises", 4, "fitness_center"),
-        ("Wall Sit (10 sec)", 4, "fitness_center"),
-        ("Side Leg Raises", 6, "fitness_center"),
-        ("Step-ups", 8, "fitness_center"),
-        // Cardio
-        ("Jumping Jacks", 6, "directions_run"),
-        ("High Knees", 6, "directions_run"),
-        ("Burpees", 15, "directions_run"),
-        ("Stair Climbs", 10, "directions_run"),
-        ("Marching in Place", 4, "directions_run"),
-        // Stretches & Mobility (great for desk workers)
-        ("Neck Stretches", 2, "accessibility"),
-        ("Shoulder Shrugs", 3, "accessibility"),
-        ("Wrist Circles", 2, "accessibility"),
-        ("Toe Touches", 4, "accessibility"),
-        ("Hip Circles", 3, "accessibility"),
-        ("Torso Twists", 3, "accessibility"),
-        ("Ankle Rotations", 2, "accessibility"),
-        ("Cat-Cow Stretch", 3, "accessibility"),
-        ("Chest Opener", 3, "accessibility"),
-        ("Quad Stretch", 3, "accessibility"),
-    ];
-
-    for (name, xp, icon) in default_exercises {
-        conn.execute(
-            "INSERT INTO exercises (name, xp_per_rep, icon, total_xp, current_level) VALUES (?, ?, ?, 0, 1)",
-            params![name, xp, icon],
-        )
-        .map_err(|e| e.to_string())?;
-    }
 
     Ok(())
 }
@@ -1321,7 +1243,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_opener::init());
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init());
 
     // Add logging in debug mode
     if cfg!(debug_assertions) {
