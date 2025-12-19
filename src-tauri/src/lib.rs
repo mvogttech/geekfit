@@ -364,7 +364,10 @@ fn complete_initial_setup(
 
     // Get all default exercise names
     let default_exercises = get_default_exercises_list();
-    let default_names: Vec<&str> = default_exercises.iter().map(|(name, _, _, _)| *name).collect();
+    let default_names: Vec<&str> = default_exercises
+        .iter()
+        .map(|(name, _, _, _)| *name)
+        .collect();
 
     // Delete exercises that are in defaults but not selected
     for name in &default_names {
