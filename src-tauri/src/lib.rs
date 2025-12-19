@@ -1390,7 +1390,7 @@ mod tests {
     }
 
     #[test]
-    fn test_default_exercises_created() {
+    fn test_no_default_exercises_on_init() {
         let conn = Connection::open_in_memory().unwrap();
         init_database(&conn).unwrap();
 
@@ -1398,10 +1398,10 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM exercises", [], |row| row.get(0))
             .unwrap();
 
-        // Should have default exercises
-        assert!(
-            count > 20,
-            "Should have at least 20 default exercises, got {}",
+        // Exercises are added through onboarding, not on init
+        assert_eq!(
+            count, 0,
+            "Should have no exercises on init, got {}",
             count
         );
     }
