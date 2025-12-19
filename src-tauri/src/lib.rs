@@ -89,6 +89,47 @@ fn level_from_xp(xp: i64) -> i32 {
     level
 }
 
+// ============ Default Exercises ============
+
+/// Returns the list of default exercises with (name, xp_per_rep, icon, category)
+fn get_default_exercises_list() -> Vec<(&'static str, i32, &'static str, &'static str)> {
+    vec![
+        // Upper body
+        ("Pushups", 10, "fitness_center", "Upper Body"),
+        ("Arm Circles", 3, "self_improvement", "Upper Body"),
+        // Core
+        ("Sit-ups", 8, "self_improvement", "Core"),
+        ("Crunches", 6, "self_improvement", "Core"),
+        ("Plank (10 sec)", 5, "self_improvement", "Core"),
+        ("Leg Raises", 8, "self_improvement", "Core"),
+        ("Mountain Climbers", 10, "self_improvement", "Core"),
+        // Lower body
+        ("Squats", 8, "fitness_center", "Lower Body"),
+        ("Lunges", 10, "fitness_center", "Lower Body"),
+        ("Calf Raises", 4, "fitness_center", "Lower Body"),
+        ("Wall Sit (10 sec)", 4, "fitness_center", "Lower Body"),
+        ("Side Leg Raises", 6, "fitness_center", "Lower Body"),
+        ("Step-ups", 8, "fitness_center", "Lower Body"),
+        // Cardio
+        ("Jumping Jacks", 6, "directions_run", "Cardio"),
+        ("High Knees", 6, "directions_run", "Cardio"),
+        ("Burpees", 15, "directions_run", "Cardio"),
+        ("Stair Climbs", 10, "directions_run", "Cardio"),
+        ("Marching in Place", 4, "directions_run", "Cardio"),
+        // Stretches & Mobility (great for desk workers)
+        ("Neck Stretches", 2, "accessibility", "Stretches"),
+        ("Shoulder Shrugs", 3, "accessibility", "Stretches"),
+        ("Wrist Circles", 2, "accessibility", "Stretches"),
+        ("Toe Touches", 4, "accessibility", "Stretches"),
+        ("Hip Circles", 3, "accessibility", "Stretches"),
+        ("Torso Twists", 3, "accessibility", "Stretches"),
+        ("Ankle Rotations", 2, "accessibility", "Stretches"),
+        ("Cat-Cow Stretch", 3, "accessibility", "Stretches"),
+        ("Chest Opener", 3, "accessibility", "Stretches"),
+        ("Quad Stretch", 3, "accessibility", "Stretches"),
+    ]
+}
+
 // ============ Database Initialization ============
 
 fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
@@ -151,48 +192,26 @@ fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
         [],
     );
 
-    // Seed default exercises - desk/office friendly, no equipment needed
-    let default_exercises: Vec<(&str, i32, &str)> = vec![
-        // Upper body
-        ("Pushups", 10, "fitness_center"),
-        ("Arm Circles", 3, "self_improvement"),
-        // Core
-        ("Sit-ups", 8, "self_improvement"),
-        ("Crunches", 6, "self_improvement"),
-        ("Plank (10 sec)", 5, "self_improvement"),
-        ("Leg Raises", 8, "self_improvement"),
-        ("Mountain Climbers", 10, "self_improvement"),
-        // Lower body
-        ("Squats", 8, "fitness_center"),
-        ("Lunges", 10, "fitness_center"),
-        ("Calf Raises", 4, "fitness_center"),
-        ("Wall Sit (10 sec)", 4, "fitness_center"),
-        ("Side Leg Raises", 6, "fitness_center"),
-        ("Step-ups", 8, "fitness_center"),
-        // Cardio
-        ("Jumping Jacks", 6, "directions_run"),
-        ("High Knees", 6, "directions_run"),
-        ("Burpees", 15, "directions_run"),
-        ("Stair Climbs", 10, "directions_run"),
-        ("Marching in Place", 4, "directions_run"),
-        // Stretches & Mobility (great for desk workers)
-        ("Neck Stretches", 2, "accessibility"),
-        ("Shoulder Shrugs", 3, "accessibility"),
-        ("Wrist Circles", 2, "accessibility"),
-        ("Toe Touches", 4, "accessibility"),
-        ("Hip Circles", 3, "accessibility"),
-        ("Torso Twists", 3, "accessibility"),
-        ("Ankle Rotations", 2, "accessibility"),
-        ("Cat-Cow Stretch", 3, "accessibility"),
-        ("Chest Opener", 3, "accessibility"),
-        ("Quad Stretch", 3, "accessibility"),
-    ];
+    // Check if initial setup is already complete - if so, don't re-seed exercises
+    let setup_complete: bool = conn
+        .query_row(
+            "SELECT value FROM settings WHERE key = 'initial_setup_complete'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .map(|v| v == "true")
+        .unwrap_or(false);
 
-    for (name, xp, icon) in default_exercises {
-        conn.execute(
-            "INSERT OR IGNORE INTO exercises (name, xp_per_rep, icon, total_xp, current_level) VALUES (?, ?, ?, 0, 1)",
-            params![name, xp, icon],
-        )?;
+    // Only seed default exercises on first run (before initial setup is complete)
+    if !setup_complete {
+        let default_exercises = get_default_exercises_list();
+
+        for (name, xp, icon, _category) in default_exercises {
+            conn.execute(
+                "INSERT OR IGNORE INTO exercises (name, xp_per_rep, icon, total_xp, current_level) VALUES (?, ?, ?, 0, 1)",
+                params![name, xp, icon],
+            )?;
+        }
     }
 
     // Seed user stats
@@ -312,6 +331,66 @@ fn delete_exercise(state: State<DbState>, id: i64) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM exercises WHERE id = ?", params![id])
         .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DefaultExercise {
+    pub name: String,
+    pub xp_per_rep: i32,
+    pub icon: String,
+    pub category: String,
+}
+
+#[tauri::command]
+fn get_default_exercises() -> Vec<DefaultExercise> {
+    get_default_exercises_list()
+        .into_iter()
+        .map(|(name, xp, icon, category)| DefaultExercise {
+            name: name.to_string(),
+            xp_per_rep: xp,
+            icon: icon.to_string(),
+            category: category.to_string(),
+        })
+        .collect()
+}
+
+#[tauri::command]
+fn complete_initial_setup(
+    state: State<DbState>,
+    selected_exercises: Vec<String>,
+) -> Result<(), String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+
+    // Get all default exercise names
+    let default_exercises = get_default_exercises_list();
+    let default_names: Vec<&str> = default_exercises
+        .iter()
+        .map(|(name, _, _, _)| *name)
+        .collect();
+
+    // Delete exercises that are in defaults but not selected
+    for name in &default_names {
+        if !selected_exercises.contains(&name.to_string()) {
+            // Delete exercise logs first (foreign key constraint)
+            conn.execute(
+                "DELETE FROM exercise_logs WHERE exercise_id IN (SELECT id FROM exercises WHERE name = ?)",
+                params![name],
+            )
+            .map_err(|e| e.to_string())?;
+            // Delete the exercise
+            conn.execute("DELETE FROM exercises WHERE name = ?", params![name])
+                .map_err(|e| e.to_string())?;
+        }
+    }
+
+    // Mark initial setup as complete so exercises won't be re-seeded
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('initial_setup_complete', 'true')",
+        [],
+    )
+    .map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
@@ -1241,7 +1320,8 @@ pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build());
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_opener::init());
 
     // Add logging in debug mode
     if cfg!(debug_assertions) {
@@ -1273,10 +1353,21 @@ pub fn run() {
 
             Ok(())
         })
+        .on_window_event(|window, event| {
+            // Minimize to tray instead of closing
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                // Hide the window instead of closing
+                let _ = window.hide();
+                // Prevent the window from actually closing
+                api.prevent_close();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             get_exercises,
             add_exercise,
             delete_exercise,
+            get_default_exercises,
+            complete_initial_setup,
             log_exercise,
             get_stats,
             get_achievements,

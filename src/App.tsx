@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { Box } from "@mui/material";
 import { UserProvider } from "./contexts/UserContext";
-import { ExerciseProvider } from "./contexts/ExerciseContext";
+import { ExerciseProvider, useExercises } from "./contexts/ExerciseContext";
 import { WellnessProvider } from "./contexts/WellnessContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
 import Sidebar from "./components/Layout/Sidebar";
@@ -23,6 +23,7 @@ const SIDEBAR_WIDTH = 220;
 function AppContent() {
   const { quickLogOpen, closeQuickLog } = useGlobalHotkey();
   const { showOnboarding, completeOnboarding } = useOnboarding();
+  const { refreshExercises } = useExercises();
 
   const {
     shortcutsDialogOpen,
@@ -31,10 +32,16 @@ function AppContent() {
     onShowShortcuts: () => setShortcutsDialogOpen(true),
   });
 
+  const handleOnboardingComplete = () => {
+    completeOnboarding();
+    // Refresh exercises after onboarding saves the selected exercises
+    refreshExercises();
+  };
+
   return (
     <>
       {/* Onboarding for first-time users */}
-      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
 
       <Box sx={{ display: "flex", height: "100vh" }}>
         {/* Sidebar Navigation */}

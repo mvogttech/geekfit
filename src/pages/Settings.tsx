@@ -43,7 +43,10 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import BugReportIcon from "@mui/icons-material/BugReport";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
+import GitHubIcon from "@mui/icons-material/GitHub";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { version } from "../../package.json";
 import {
   isPermissionGranted,
   requestPermission,
@@ -1024,15 +1027,32 @@ export default function Settings() {
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
-                Version 1.0.0
+                Version {version}
               </Typography>
               <Typography variant="body2" color="text.secondary" mt={1}>
                 A gamified fitness tracker for programmers. Level up your fitness
                 with XP, achievements, and streaks!
               </Typography>
-              <Typography variant="body2" color="text.secondary" mt={1}>
-                Open source on GitHub - contributions welcome!
-              </Typography>
+              <Box
+                onClick={() => openUrl("https://github.com/mvogttech/geekfit")}
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  mt: 1.5,
+                  color: "text.secondary",
+                  cursor: "pointer",
+                  transition: "color 0.2s",
+                  "&:hover": {
+                    color: "primary.main",
+                  },
+                }}
+              >
+                <GitHubIcon sx={{ fontSize: 18 }} />
+                <Typography variant="body2">
+                  Open source on GitHub - contributions welcome!
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>

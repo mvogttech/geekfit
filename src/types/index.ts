@@ -9,6 +9,14 @@ export interface Exercise {
   created_at: string;
 }
 
+// Default exercise for onboarding selection
+export interface DefaultExercise {
+  name: string;
+  xp_per_rep: number;
+  icon: string;
+  category: string;
+}
+
 // Exercise log types
 export interface ExerciseLog {
   id: number;
