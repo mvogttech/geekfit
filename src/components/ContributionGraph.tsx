@@ -168,31 +168,8 @@ export default function ContributionGraph({
         </Box>
       </Box>
 
-      {/* Month labels */}
-      <Box
-        sx={{
-          display: "flex",
-          ml: "32px",
-          mb: 0.5,
-          fontSize: 10,
-          color: "text.secondary",
-        }}
-      >
-        {monthLabels.map((label, i) => (
-          <Box
-            key={i}
-            sx={{
-              position: "absolute",
-              left: 32 + label.weekIndex * (cellSize + cellGap),
-            }}
-          >
-            {label.month}
-          </Box>
-        ))}
-      </Box>
-
       {/* Graph container */}
-      <Box sx={{ display: "flex", position: "relative", mt: 3 }}>
+      <Box sx={{ display: "flex" }}>
         {/* Day labels */}
         <Box
           sx={{
@@ -201,6 +178,7 @@ export default function ContributionGraph({
             mr: 1,
             fontSize: 10,
             color: "text.secondary",
+            mt: "20px", // Space for month labels
           }}
         >
           {["", "Mon", "", "Wed", "", "Fri", ""].map((day, i) => (
@@ -217,11 +195,45 @@ export default function ContributionGraph({
           ))}
         </Box>
 
-        {/* Grid */}
-        <Box
-          sx={{
-            display: "flex",
-            gap: `${cellGap}px`,
+        {/* Grid with month labels */}
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
+          {/* Month labels */}
+          <Box
+            sx={{
+              display: "flex",
+              fontSize: 10,
+              color: "text.secondary",
+              mb: 0.5,
+              height: 16,
+            }}
+          >
+            {monthLabels.map((label, i) => {
+              // Calculate position based on week index difference from previous label
+              const prevWeekIndex = i > 0 ? monthLabels[i - 1].weekIndex : 0;
+              const weekDiff = label.weekIndex - prevWeekIndex;
+              const marginLeft = i === 0
+                ? label.weekIndex * (cellSize + cellGap)
+                : (weekDiff - 1) * (cellSize + cellGap);
+
+              return (
+                <Box
+                  key={i}
+                  sx={{
+                    ml: `${Math.max(0, marginLeft)}px`,
+                    minWidth: cellSize + cellGap,
+                  }}
+                >
+                  {label.month}
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* Grid */}
+          <Box
+            sx={{
+              display: "flex",
+              gap: `${cellGap}px`,
             overflowX: "auto",
             pb: 1,
           }}
@@ -285,6 +297,7 @@ export default function ContributionGraph({
               ))}
             </Box>
           ))}
+          </Box>
         </Box>
       </Box>
 
