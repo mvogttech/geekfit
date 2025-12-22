@@ -709,6 +709,43 @@ fn get_exercise_history(state: State<DbState>, days: i32) -> Result<Vec<Exercise
     Ok(logs)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ActivityData {
+    pub date: String,
+    pub count: i32,
+    pub xp: i32,
+}
+
+#[tauri::command]
+fn get_activity_data(state: State<DbState>, days: i32) -> Result<Vec<ActivityData>, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT DATE(logged_at) as date, COUNT(*) as count, SUM(xp_earned) as xp
+             FROM exercise_logs
+             WHERE logged_at >= datetime('now', 'localtime', ? || ' days')
+             GROUP BY DATE(logged_at)
+             ORDER BY date",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let days_param = format!("-{}", days);
+    let activity = stmt
+        .query_map([days_param], |row| {
+            Ok(ActivityData {
+                date: row.get(0)?,
+                count: row.get(1)?,
+                xp: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(activity)
+}
+
 #[tauri::command]
 fn get_settings(state: State<DbState>) -> Result<Settings, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
@@ -1354,6 +1391,7 @@ pub fn run() {
             get_stats,
             get_achievements,
             get_exercise_history,
+            get_activity_data,
             get_settings,
             update_setting,
             export_data,

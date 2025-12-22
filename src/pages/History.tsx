@@ -18,6 +18,13 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { ExerciseLog } from "../types";
 import { useExercises } from "../contexts/ExerciseContext";
+import ContributionGraph from "../components/ContributionGraph";
+
+interface ActivityData {
+  date: string;
+  count: number;
+  xp: number;
+}
 
 interface LogWithExercise extends ExerciseLog {
   exercise_name?: string;
@@ -26,8 +33,24 @@ interface LogWithExercise extends ExerciseLog {
 export default function History() {
   const { exercises } = useExercises();
   const [logs, setLogs] = useState<LogWithExercise[]>([]);
+  const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
+
+  // Fetch activity data for the contribution graph (full year)
+  useEffect(() => {
+    const fetchActivityData = async () => {
+      try {
+        const data = await invoke<ActivityData[]>("get_activity_data", {
+          days: 365,
+        });
+        setActivityData(data);
+      } catch (error) {
+        console.error("Failed to fetch activity data:", error);
+      }
+    };
+    fetchActivityData();
+  }, []);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -110,6 +133,14 @@ export default function History() {
           <ToggleButton value={90}>90 Days</ToggleButton>
         </ToggleButtonGroup>
       </Box>
+
+      {/* Activity Graph */}
+      <Card sx={{ mb: 3, p: 2 }}>
+        <Typography variant="h6" fontWeight={600} mb={2}>
+          Activity
+        </Typography>
+        <ContributionGraph data={activityData} weeks={52} />
+      </Card>
 
       {/* Summary Cards */}
       <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
