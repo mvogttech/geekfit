@@ -698,7 +698,9 @@ fn update_setting(state: State<DbState>, key: String, value: String) -> Result<(
 }
 
 #[tauri::command]
-fn get_wellness_settings(state: State<DbState>) -> Result<std::collections::HashMap<String, String>, String> {
+fn get_wellness_settings(
+    state: State<DbState>,
+) -> Result<std::collections::HashMap<String, String>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let mut settings = std::collections::HashMap::new();
 
