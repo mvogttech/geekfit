@@ -1,6 +1,8 @@
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::TrayIconBuilder,
@@ -9,6 +11,15 @@ use tauri::{
 
 // Database state
 struct DbState(Mutex<Connection>);
+
+// Reminder state for background scheduling
+struct ReminderState {
+    last_eye_care: Mutex<Instant>,
+    last_hydration: Mutex<Instant>,
+    last_posture: Mutex<Instant>,
+    last_exercise: Mutex<Instant>,
+    running: AtomicBool,
+}
 
 // ============ Data Structures ============
 
@@ -686,6 +697,193 @@ fn update_setting(state: State<DbState>, key: String, value: String) -> Result<(
     Ok(())
 }
 
+#[tauri::command]
+fn get_wellness_settings(state: State<DbState>) -> Result<std::collections::HashMap<String, String>, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let mut settings = std::collections::HashMap::new();
+
+    // Define wellness settings with their defaults
+    let wellness_keys = [
+        ("eye_care_enabled", "true"),
+        ("eye_care_interval", "20"),
+        ("hydration_enabled", "true"),
+        ("hydration_interval", "60"),
+        ("hydration_goal", "8"),
+        ("posture_enabled", "true"),
+        ("posture_interval", "45"),
+        ("focus_mode_enabled", "true"),
+        ("focus_mode_threshold", "90"),
+    ];
+
+    for (key, default) in wellness_keys {
+        let value: String = conn
+            .query_row(
+                "SELECT value FROM settings WHERE key = ?",
+                params![format!("wellness_{}", key)],
+                |row| row.get(0),
+            )
+            .unwrap_or_else(|_| default.to_string());
+        settings.insert(key.to_string(), value);
+    }
+
+    Ok(settings)
+}
+
+#[tauri::command]
+fn reset_reminder_timer(
+    reminder_state: State<ReminderState>,
+    reminder_type: String,
+) -> Result<(), String> {
+    let now = Instant::now();
+    match reminder_type.as_str() {
+        "eye_care" => *reminder_state.last_eye_care.lock().unwrap() = now,
+        "hydration" => *reminder_state.last_hydration.lock().unwrap() = now,
+        "posture" => *reminder_state.last_posture.lock().unwrap() = now,
+        "exercise" => *reminder_state.last_exercise.lock().unwrap() = now,
+        "all" => {
+            *reminder_state.last_eye_care.lock().unwrap() = now;
+            *reminder_state.last_hydration.lock().unwrap() = now;
+            *reminder_state.last_posture.lock().unwrap() = now;
+            *reminder_state.last_exercise.lock().unwrap() = now;
+        }
+        _ => return Err(format!("Unknown reminder type: {}", reminder_type)),
+    }
+    Ok(())
+}
+
+// ============ Background Reminder System ============
+
+fn start_reminder_loop(app_handle: AppHandle) {
+    let handle = app_handle.clone();
+
+    std::thread::spawn(move || {
+        // Check every 30 seconds
+        let check_interval = Duration::from_secs(30);
+
+        loop {
+            std::thread::sleep(check_interval);
+
+            // Get reminder state
+            let reminder_state = match handle.try_state::<ReminderState>() {
+                Some(state) => state,
+                None => continue,
+            };
+
+            if !reminder_state.running.load(Ordering::Relaxed) {
+                continue;
+            }
+
+            // Get database connection
+            let db_state = match handle.try_state::<DbState>() {
+                Some(state) => state,
+                None => continue,
+            };
+
+            let conn = match db_state.0.lock() {
+                Ok(conn) => conn,
+                Err(_) => continue,
+            };
+
+            // Helper to get setting value
+            let get_setting = |key: &str, default: &str| -> String {
+                conn.query_row(
+                    "SELECT value FROM settings WHERE key = ?",
+                    params![key],
+                    |row| row.get(0),
+                )
+                .unwrap_or_else(|_| default.to_string())
+            };
+
+            let now = Instant::now();
+
+            // Check eye care reminder
+            let eye_care_enabled = get_setting("wellness_eye_care_enabled", "true") == "true";
+            let eye_care_interval: u64 = get_setting("wellness_eye_care_interval", "20")
+                .parse()
+                .unwrap_or(20);
+
+            if eye_care_enabled {
+                let last = *reminder_state.last_eye_care.lock().unwrap();
+                if now.duration_since(last) >= Duration::from_secs(eye_care_interval * 60) {
+                    send_reminder_notification(
+                        &handle,
+                        "Eye Break Time! 👀",
+                        "Look at something 20 feet away for 20 seconds. Your eyes will thank you!",
+                    );
+                    *reminder_state.last_eye_care.lock().unwrap() = now;
+                }
+            }
+
+            // Check hydration reminder
+            let hydration_enabled = get_setting("wellness_hydration_enabled", "true") == "true";
+            let hydration_interval: u64 = get_setting("wellness_hydration_interval", "60")
+                .parse()
+                .unwrap_or(60);
+
+            if hydration_enabled {
+                let last = *reminder_state.last_hydration.lock().unwrap();
+                if now.duration_since(last) >= Duration::from_secs(hydration_interval * 60) {
+                    send_reminder_notification(
+                        &handle,
+                        "Hydration Reminder 💧",
+                        "Time to drink some water! Stay hydrated for better focus.",
+                    );
+                    *reminder_state.last_hydration.lock().unwrap() = now;
+                }
+            }
+
+            // Check posture reminder
+            let posture_enabled = get_setting("wellness_posture_enabled", "true") == "true";
+            let posture_interval: u64 = get_setting("wellness_posture_interval", "45")
+                .parse()
+                .unwrap_or(45);
+
+            if posture_enabled {
+                let last = *reminder_state.last_posture.lock().unwrap();
+                if now.duration_since(last) >= Duration::from_secs(posture_interval * 60) {
+                    send_reminder_notification(
+                        &handle,
+                        "Posture Check! 🧘",
+                        "Roll your shoulders back, unclench your jaw, and sit up straight.",
+                    );
+                    *reminder_state.last_posture.lock().unwrap() = now;
+                }
+            }
+
+            // Check exercise reminder
+            let exercise_enabled = get_setting("reminder_enabled", "true") == "true";
+            let exercise_interval: u64 = get_setting("reminder_interval_minutes", "120")
+                .parse()
+                .unwrap_or(120);
+
+            if exercise_enabled {
+                let last = *reminder_state.last_exercise.lock().unwrap();
+                if now.duration_since(last) >= Duration::from_secs(exercise_interval * 60) {
+                    send_reminder_notification(
+                        &handle,
+                        "Exercise Break! 💪",
+                        "Time for a quick exercise break! Move your body, refresh your mind.",
+                    );
+                    *reminder_state.last_exercise.lock().unwrap() = now;
+                }
+            }
+
+            // Drop the connection lock before sleeping
+            drop(conn);
+        }
+    });
+}
+
+fn send_reminder_notification(app_handle: &AppHandle, title: &str, body: &str) {
+    use tauri_plugin_notification::NotificationExt;
+    let _ = app_handle
+        .notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show();
+}
+
 // ============ Export/Import Data ============
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1267,6 +1465,19 @@ pub fn run() {
 
             app.manage(DbState(Mutex::new(conn)));
 
+            // Initialize reminder state
+            let now = Instant::now();
+            app.manage(ReminderState {
+                last_eye_care: Mutex::new(now),
+                last_hydration: Mutex::new(now),
+                last_posture: Mutex::new(now),
+                last_exercise: Mutex::new(now),
+                running: AtomicBool::new(true),
+            });
+
+            // Start background reminder loop
+            start_reminder_loop(app.handle().clone());
+
             // Setup system tray
             setup_tray(app.handle())?;
 
@@ -1297,6 +1508,8 @@ pub fn run() {
             get_exercise_history,
             get_settings,
             update_setting,
+            get_wellness_settings,
+            reset_reminder_timer,
             export_data,
             import_data,
             reset_all_data,

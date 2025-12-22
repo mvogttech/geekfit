@@ -7,11 +7,6 @@ import {
   ReactNode,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  isPermissionGranted,
-  sendNotification,
-} from "@tauri-apps/plugin-notification";
-import { playReminderSound } from "../utils/sounds";
 
 // Wellness settings interface
 interface WellnessSettings {
@@ -158,7 +153,6 @@ export function WellnessProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<WellnessStats>(defaultStats);
   const [isInFocusMode, setIsInFocusMode] = useState(false);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Load settings from backend
   useEffect(() => {
@@ -182,14 +176,6 @@ export function WellnessProvider({ children }: { children: ReactNode }) {
         // Use defaults
       }
 
-      // Load sound setting
-      try {
-        const appSettings = await invoke<{ sound_enabled: boolean }>("get_settings");
-        setSoundEnabled(appSettings.sound_enabled);
-      } catch {
-        // Default to true
-      }
-
       // Load today's water intake
       const savedWater = localStorage.getItem("geekfit_water_today");
       const savedDate = localStorage.getItem("geekfit_water_date");
@@ -203,75 +189,15 @@ export function WellnessProvider({ children }: { children: ReactNode }) {
     loadSettings();
   }, []);
 
-  // Eye care timer
+  // Note: Reminder notifications are now handled by the Rust backend
+  // This runs even when the app window is hidden/minimized to tray
+  // Reset backend timers when settings change
   useEffect(() => {
-    if (!settings.eyeCareEnabled) return;
-
-    const interval = setInterval(async () => {
-      // Check if in focus mode - don't interrupt
-      if (isInFocusMode && settings.focusModeEnabled) return;
-
-      const permissionGranted = await isPermissionGranted();
-      if (permissionGranted) {
-        sendNotification({
-          title: "Eye Break Time!",
-          body: "Look at something 20 feet away for 20 seconds. Your eyes will thank you!",
-        });
-        if (soundEnabled) {
-          playReminderSound();
-        }
-      }
-    }, settings.eyeCareInterval * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [settings.eyeCareEnabled, settings.eyeCareInterval, isInFocusMode, soundEnabled, settings.focusModeEnabled]);
-
-  // Hydration timer
-  useEffect(() => {
-    if (!settings.hydrationEnabled) return;
-
-    const interval = setInterval(async () => {
-      if (isInFocusMode && settings.focusModeEnabled) return;
-
-      const remaining = settings.hydrationGoal - stats.waterIntake;
-      if (remaining <= 0) return; // Goal reached
-
-      const permissionGranted = await isPermissionGranted();
-      if (permissionGranted) {
-        sendNotification({
-          title: "Hydration Reminder",
-          body: `Time to drink some water! ${remaining} glasses left to reach your daily goal.`,
-        });
-        if (soundEnabled) {
-          playReminderSound();
-        }
-      }
-    }, settings.hydrationInterval * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [settings.hydrationEnabled, settings.hydrationInterval, stats.waterIntake, settings.hydrationGoal, isInFocusMode, soundEnabled, settings.focusModeEnabled]);
-
-  // Posture timer
-  useEffect(() => {
-    if (!settings.postureEnabled) return;
-
-    const interval = setInterval(async () => {
-      if (isInFocusMode && settings.focusModeEnabled) return;
-
-      const permissionGranted = await isPermissionGranted();
-      if (permissionGranted) {
-        sendNotification({
-          title: "Posture Check!",
-          body: "Roll your shoulders back, unclench your jaw, and sit up straight.",
-        });
-        if (soundEnabled) {
-          playReminderSound();
-        }
-      }
-    }, settings.postureInterval * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [settings.postureEnabled, settings.postureInterval, isInFocusMode, soundEnabled, settings.focusModeEnabled]);
+    // Reset all reminder timers when app starts to sync with backend
+    invoke("reset_reminder_timer", { reminderType: "all" }).catch(() => {
+      // Ignore errors - backend may not be ready yet
+    });
+  }, []);
 
   // Focus mode detection - track keyboard/mouse activity
   useEffect(() => {
@@ -322,23 +248,6 @@ export function WellnessProvider({ children }: { children: ReactNode }) {
     };
   }, [settings.focusModeEnabled]);
 
-  // Send reminder when exiting focus mode after threshold
-  useEffect(() => {
-    if (!isInFocusMode && settings.focusModeEnabled) {
-      // Just exited focus mode - suggest a break
-      const checkBreak = async () => {
-        const permissionGranted = await isPermissionGranted();
-        if (permissionGranted && stats.focusMinutesToday > settings.focusModeThreshold) {
-          sendNotification({
-            title: "Focus Session Complete!",
-            body: "Great focus session! Take a short break - stretch, walk, or do some exercises.",
-          });
-        }
-      };
-      checkBreak();
-    }
-  }, [isInFocusMode, settings.focusModeEnabled, settings.focusModeThreshold, stats.focusMinutesToday]);
-
   const updateSettings = useCallback(
     async (key: keyof WellnessSettings, value: boolean | number) => {
       setSettings(prev => ({ ...prev, [key]: value }));
@@ -361,6 +270,8 @@ export function WellnessProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("geekfit_water_date", new Date().toDateString());
       return { ...prev, waterIntake: newIntake };
     });
+    // Reset backend hydration timer
+    invoke("reset_reminder_timer", { reminderType: "hydration" }).catch(() => {});
   }, []);
 
   const resetWater = useCallback(() => {
@@ -371,10 +282,14 @@ export function WellnessProvider({ children }: { children: ReactNode }) {
 
   const acknowledgeEyeBreak = useCallback(() => {
     setStats(prev => ({ ...prev, lastEyeBreak: new Date() }));
+    // Reset backend timer so next reminder is delayed
+    invoke("reset_reminder_timer", { reminderType: "eye_care" }).catch(() => {});
   }, []);
 
   const acknowledgePostureCheck = useCallback(() => {
     setStats(prev => ({ ...prev, lastPostureCheck: new Date() }));
+    // Reset backend timer so next reminder is delayed
+    invoke("reset_reminder_timer", { reminderType: "posture" }).catch(() => {});
   }, []);
 
   const refreshTip = useCallback(() => {
