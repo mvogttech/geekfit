@@ -1,3 +1,4 @@
+use chrono::Timelike;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -246,6 +247,15 @@ fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
             "Well-Rounded",
             "Log 5 different types of exercises",
         ),
+        ("early_bird", "Early Bird", "Exercise before 7 AM"),
+        ("night_owl", "Night Owl", "Exercise after 10 PM"),
+        ("thousand_reps", "Rep Machine", "Complete 1,000 total reps"),
+        (
+            "ten_thousand_reps",
+            "Iron Will",
+            "Complete 10,000 total reps",
+        ),
+        ("nice", "Nice", "Reach level 69 in any exercise"),
     ];
 
     for (key, name, desc) in achievements {
@@ -566,6 +576,55 @@ fn check_achievements(
     if pushups_today >= 100 {
         conn.execute(
             "UPDATE achievements SET unlocked_at = ? WHERE key = 'hundred_pushups' AND unlocked_at IS NULL",
+            params![today],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    // Time-based achievements
+    let current_hour = chrono::Local::now().hour();
+    if current_hour < 7 {
+        conn.execute(
+            "UPDATE achievements SET unlocked_at = ? WHERE key = 'early_bird' AND unlocked_at IS NULL",
+            params![today],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if current_hour >= 22 {
+        conn.execute(
+            "UPDATE achievements SET unlocked_at = ? WHERE key = 'night_owl' AND unlocked_at IS NULL",
+            params![today],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    // Total reps achievements
+    let total_reps: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(reps), 0) FROM exercise_logs",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    if total_reps >= 1000 {
+        conn.execute(
+            "UPDATE achievements SET unlocked_at = ? WHERE key = 'thousand_reps' AND unlocked_at IS NULL",
+            params![today],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if total_reps >= 10000 {
+        conn.execute(
+            "UPDATE achievements SET unlocked_at = ? WHERE key = 'ten_thousand_reps' AND unlocked_at IS NULL",
+            params![today],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    // Nice achievement (level 69)
+    if exercise_level == 69 {
+        conn.execute(
+            "UPDATE achievements SET unlocked_at = ? WHERE key = 'nice' AND unlocked_at IS NULL",
             params![today],
         )
         .map_err(|e| e.to_string())?;
